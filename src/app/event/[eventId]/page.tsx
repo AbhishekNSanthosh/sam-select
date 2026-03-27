@@ -15,6 +15,7 @@ import SelectionDrawer from "@/components/selection/SelectionDrawer";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { useSelection } from "@/hooks/useSelection";
 import SelfieSearch from "@/components/gallery/SelfieSearch";
+import PeopleSearch from "@/components/gallery/PeopleSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
 import type { IEvent, IAlbum, IPhoto } from "@/types";
 import type { CategorySummary } from "@/app/api/admin/events/[eventId]/categories/route";
@@ -184,7 +185,7 @@ export default function EventGalleryPage() {
         <div className="px-[5vw] py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
-            {isLocked && <Badge variant="green">Submitted</Badge>}
+            {/* {isLocked && <Badge variant="green" className="hidden sm:inline-flex">Submitted</Badge>} */}
             {/* Selfie search icon */}
             <button
               onClick={() => setSelfieOpen(true)}
@@ -193,6 +194,7 @@ export default function EventGalleryPage() {
             >
               <ScanFace size={16} />
               <span className="hidden sm:inline text-sm">Search with Selfie</span>
+              <span className="bg-[#D6C3A3]/20 text-[#B89B72] text-[9px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider -ml-0.5 hidden sm:inline-block">Beta</span>
             </button>
             <button
               onClick={handleLogout}
@@ -282,6 +284,16 @@ export default function EventGalleryPage() {
           onClose={() => setSelfieOpen(false)}
         />
       </BottomSheet>
+
+      {/* People Search Smart Grouping */}
+      <PeopleSearch
+        eventId={eventId}
+        isLocked={isLocked}
+        selectedIds={selected}
+        allowDownload={event?.allowDownload}
+        onSelectPhoto={setPreviewPhoto}
+        onTogglePhoto={handleToggle}
+      />
 
       <SelectionDrawer
         open={drawerOpen}

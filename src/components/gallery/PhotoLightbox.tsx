@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { X, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { cn } from "@/lib/utils/cn";
 import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 import type { IPhoto } from "@/types";
@@ -178,40 +179,48 @@ export default function PhotoLightbox({
           </button>
         )}
 
-        {/* Image wrapper */}
-        <div className="relative flex items-center justify-center w-full h-full px-14 sm:px-16 py-4">
-          <div className="relative flex items-center justify-center w-full h-full">
-            {/* Thumbnail — shown immediately, sharp (not blurred), fades out once full-res loads */}
-            <Image
-              src={photo.thumbnailUrl}
-              alt={photo.filename}
-              aria-hidden={fullLoaded}
-              width={photo.width ?? 800}
-              height={photo.height ?? 600}
-              className={cn(
-                "absolute max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg pointer-events-none transition-opacity duration-500",
-                fullLoaded ? "opacity-0" : "opacity-100"
-              )}
-              priority
-              unoptimized
-            />
+        {/* Image wrapper with Zoom/Pan */}
+        <div className="relative flex items-center justify-center w-full h-full px-0 sm:px-16 py-4 overflow-hidden touch-none">
+          <TransformWrapper
+            initialScale={1}
+            minScale={1}
+            maxScale={6}
+            centerOnInit
+            wheel={{ step: 0.1 }}
+            doubleClick={{ step: 2 }}
+          >
+            <TransformComponent
+              wrapperClass="!w-full !h-full"
+              contentClass="!w-full !h-full flex items-center justify-center"
+            >
+              <div className="relative flex items-center justify-center w-full h-full max-w-[100vw] max-h-[calc(100vh-180px)] px-2 sm:px-0">
+                {/* Thumbnail — shown immediately, sharp (not blurred), fades out once full-res loads */}
+                <img
+                  src={photo.thumbnailUrl}
+                  alt={photo.filename}
+                  aria-hidden={fullLoaded}
+                  className={cn(
+                    "absolute w-auto h-auto max-w-full max-h-full object-contain rounded-lg pointer-events-none transition-opacity duration-500",
+                    fullLoaded ? "opacity-0" : "opacity-100"
+                  )}
+                  draggable={false}
+                />
 
-            {/* Full-resolution image — loads silently in background, then fades in */}
-            <Image
-              key={photo._id}
-              src={photo.fullUrl || photo.thumbnailUrl}
-              alt={photo.filename}
-              width={photo.width ?? 1200}
-              height={photo.height ?? 800}
-              className={cn(
-                "max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg shadow-md select-none transition-opacity duration-500",
-                fullLoaded ? "opacity-100" : "opacity-0"
-              )}
-              onLoad={() => setFullLoaded(true)}
-              unoptimized
-              draggable={false}
-            />
-          </div>
+                {/* Full-resolution image — loads silently in background, then fades in */}
+                <img
+                  key={photo._id}
+                  src={photo.fullUrl || photo.thumbnailUrl}
+                  alt={photo.filename}
+                  className={cn(
+                    "w-auto h-auto max-w-full max-h-full object-contain rounded-lg shadow-md select-none transition-opacity duration-500",
+                    fullLoaded ? "opacity-100" : "opacity-0"
+                  )}
+                  onLoad={() => setFullLoaded(true)}
+                  draggable={false}
+                />
+              </div>
+            </TransformComponent>
+          </TransformWrapper>
         </div>
 
         {/* Selected badge */}

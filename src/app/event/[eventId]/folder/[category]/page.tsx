@@ -8,6 +8,7 @@ import Logo from "@/components/layout/Logo";
 import MasonryGrid from "@/components/gallery/MasonryGrid";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import SelfieSearch from "@/components/gallery/SelfieSearch";
+import PeopleSearch from "@/components/gallery/PeopleSearch";
 import BottomSheet from "@/components/ui/BottomSheet";
 import SelectionBar from "@/components/selection/SelectionBar";
 import SelectionDrawer from "@/components/selection/SelectionDrawer";
@@ -241,7 +242,7 @@ export default function EventFolderPage() {
     );
   }
 
-  if (loading) {
+  if (loading || (isSearching && photos.length === 0)) {
     return (
       <div className="min-h-screen bg-[#FBF9F6]">
         {/* Skeleton header */}
@@ -323,7 +324,7 @@ export default function EventFolderPage() {
           </div>
           
           {/* Search bar + Selfie icon */}
-          <div className="relative w-full md:w-72 shrink-0 shadow-sm border border-[#EDE7DD] rounded-full bg-white flex items-center px-4 overflow-hidden focus-within:border-[#D6C3A3] focus-within:ring-2 focus-within:ring-[#D6C3A3]/20 transition-all">
+          <div className="relative w-full md:w-72 shrink-0 border border-[#EDE7DD] rounded-full bg-white flex items-center px-4 overflow-hidden focus-within:border-[#D6C3A3] focus-within:ring-2 focus-within:ring-[#D6C3A3]/20 transition-all">
             {isSearching ? (
               <Spinner className="w-4 h-4 text-[#B89B72]" />
             ) : (
@@ -350,7 +351,8 @@ export default function EventFolderPage() {
               className="flex items-center gap-1.5 text-[#6B6B6B] hover:text-[#B89B72] transition-colors shrink-0 py-1 pl-1"
             >
               <ScanFace size={16} />
-              <span className="hidden sm:inline text-xs font-medium pr-1">Selfie</span>
+              <span className="hidden sm:inline text-xs font-medium -pr-1">Selfie</span>
+              <span className="bg-[#D6C3A3]/20 text-[#B89B72] text-[8px] px-1 py-0.5 rounded uppercase font-bold tracking-wider sm:ml-0.5 mt-px">Beta</span>
             </button>
           </div>
         </div>
@@ -404,6 +406,17 @@ export default function EventFolderPage() {
           onClose={() => setSelfieOpen(false)}
         />
       </BottomSheet>
+
+      {/* Smart Grouping People Search */}
+      <PeopleSearch
+        eventId={eventId}
+        isLocked={isLocked}
+        selectedIds={selected}
+        allowDownload={event?.allowDownload}
+        onSelectPhoto={setPreviewPhoto}
+        onTogglePhoto={handleToggle}
+      />
+
       <SelectionDrawer
         open={drawerOpen}
         selectedIds={selected}

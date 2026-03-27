@@ -344,28 +344,52 @@ export default function SelfieSearch({
           </div>
         )}
 
-        {/* Processing */}
+        {/* Processing State (Face ID Style) */}
         {isProcessing && (
-          <div className="flex items-center gap-3">
-            {previewDataUrl && (
-              <img src={previewDataUrl} alt="Your photo" className="w-12 h-12 rounded-lg object-cover shrink-0 border border-[#EDE7DD]" />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Loader2 size={13} className="text-[#D6C3A3] animate-spin shrink-0" />
-                <p className="text-sm font-medium text-[#2B2B2B]">
-                  {phase === "loading_models" && "Loading AI models…"}
-                  {phase === "analyzing" && "Detecting your face…"}
-                  {phase === "searching" && "Searching the gallery…"}
+          <div className="flex flex-col items-center justify-center py-6 animate-fade-in relative">
+            <style>{`
+              @keyframes scan_laser {
+                0% { transform: translateY(-30%); }
+                50% { transform: translateY(80%); }
+                100% { transform: translateY(-30%); }
+              }
+            `}</style>
+
+            {/* Avatar with scanning effect */}
+            <div className="relative w-24 h-24 rounded-full overflow-hidden shrink-0 border-4 border-[#FBF9F6] shadow-xl mb-6 ring-1 ring-[#D6C3A3]/40">
+              {previewDataUrl ? (
+                <img src={previewDataUrl} alt="Scanning" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-[#EDE7DD] flex flex-col items-center justify-center text-[#B89B72]">
+                  <ScanFace size={28} />
+                </div>
+              )}
+              
+              {/* Laser overlay */}
+              <div 
+                className="absolute inset-x-0 w-full h-[60%] bg-gradient-to-b from-transparent via-white/80 to-transparent pointer-events-none" 
+                style={{ animation: "scan_laser 2s ease-in-out infinite" }}
+              />
+            </div>
+
+            {/* Status text & Progress */}
+            <div className="text-center w-full max-w-[200px]">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Loader2 size={15} className="text-[#B89B72] animate-spin shrink-0" />
+                <p className="text-sm font-semibold text-[#2B2B2B]">
+                  {phase === "loading_models" && "Waking up AI..."}
+                  {phase === "analyzing" && "Analyzing face..."}
+                  {phase === "searching" && "Searching gallery..."}
                 </p>
               </div>
-              <div className="h-1 bg-[#F5F2EE] rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-[#F5F2EE] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#D6C3A3] to-[#C8A96A] rounded-full transition-all duration-700 ease-out"
-                  style={{ width: phase === "loading_models" ? "25%" : phase === "analyzing" ? "65%" : "90%" }}
+                  className="h-full bg-gradient-to-r from-[#D6C3A3] to-[#B89B72] rounded-full transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+                  style={{ width: phase === "loading_models" ? "25%" : phase === "analyzing" ? "65%" : "95%" }}
                 />
               </div>
             </div>
+            
           </div>
         )}
 

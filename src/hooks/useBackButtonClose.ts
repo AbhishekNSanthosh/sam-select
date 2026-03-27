@@ -19,7 +19,10 @@ export function useBackButtonClose(isOpen: boolean, onClose: () => void) {
     const handlePopState = () => {
       // Ignore the popstate if we artificially triggered it via history.back()
       // This normally happens during React Strict Mode unmount/remount cycles.
-      if ((window as any).__popping_lightbox) return;
+      if ((window as any).__expected_pops > 0) {
+        (window as any).__expected_pops--;
+        return;
+      }
       onCloseRef.current();
     };
 
@@ -31,15 +34,10 @@ export function useBackButtonClose(isOpen: boolean, onClose: () => void) {
       // If the component is unmounting (e.g. user clicked X, or Strict Mode),
       // we need to remove the sentinel from the history stack.
       if (window.history.state?._lightboxOpen) {
-        // Lock the popstate handler so the immediate async event doesn't trigger onClose
-        (window as any).__popping_lightbox = true;
+        // Register an expected artificial pop
+        (window as any).__expected_pops = ((window as any).__expected_pops || 0) + 1;
         
         window.history.back();
-
-        // Release the lock shortly after the async back event completes
-        setTimeout(() => {
-          (window as any).__popping_lightbox = false;
-        }, 100);
       }
     };
   }, [isOpen]);
