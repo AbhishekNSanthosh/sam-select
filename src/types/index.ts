@@ -4,12 +4,14 @@ export interface IEvent {
   clientName: string;
   eventDate: string;
   pin: string;
+  shareToken: string;
   description?: string;
   coverPhoto?: string;
   status: "active" | "locked" | "archived";
   totalPhotos: number;
   minSelection?: number;
   maxSelection?: number;
+  allowDownload?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +27,7 @@ export interface IPhoto {
   height?: number;
   isBlurry?: boolean;
   popularity: number;
+  category?: string;
   createdAt: string;
 }
 

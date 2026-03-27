@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { connectDB } from "@/lib/db/connect";
 import Event from "@/models/Event";
 import { getSession } from "@/lib/utils/session";
@@ -10,7 +11,7 @@ export async function GET() {
   if (!session || session.eventId !== "admin") return err("Unauthorized", 401);
 
   await connectDB();
-  const events = await Event.find({}).sort({ createdAt: -1 }).select("-pin");
+  const events = await Event.find({}).sort({ createdAt: -1 });
   return ok(events);
 }
 
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     clientName,
     eventDate: new Date(eventDate),
     pin,
+    shareToken: randomUUID(),
     description,
     minSelection,
     maxSelection,

@@ -9,6 +9,7 @@ import type { IPhoto } from "@/types";
 interface PhotoLightboxProps {
   photo: IPhoto;
   photos: IPhoto[];
+  totalPhotos: number;
   isSelected: boolean;
   isLocked: boolean;
   onClose: () => void;
@@ -19,6 +20,7 @@ interface PhotoLightboxProps {
 export default function PhotoLightbox({
   photo,
   photos,
+  totalPhotos,
   isSelected,
   isLocked,
   onClose,
@@ -56,7 +58,7 @@ export default function PhotoLightbox({
           <span className="text-sm">Close</span>
         </button>
         <span className="text-sm text-[#6B6B6B]">
-          {currentIndex + 1} / {photos.length}
+          {currentIndex + 1} / {totalPhotos}
         </span>
         {!isLocked && (
           <button
@@ -93,12 +95,11 @@ export default function PhotoLightbox({
 
         <div className="relative max-w-full max-h-full flex items-center justify-center animate-scale-in">
           <Image
-            src={photo.fullUrl}
+            src={photo.thumbnailUrl.replace(/=s\d+$/, "=s1600")}
             alt={photo.filename}
             width={photo.width ?? 1200}
             height={photo.height ?? 800}
             className="max-h-[80vh] w-auto object-contain rounded-lg shadow-2xl"
-            unoptimized
             priority
           />
           {isSelected && (

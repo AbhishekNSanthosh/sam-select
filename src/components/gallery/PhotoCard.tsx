@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, Download } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { IPhoto } from "@/types";
 
@@ -10,6 +10,7 @@ interface PhotoCardProps {
   photo: IPhoto;
   isSelected: boolean;
   isLocked: boolean;
+  allowDownload?: boolean;
   onToggle: (id: string) => void;
   onPreview: (photo: IPhoto) => void;
 }
@@ -18,6 +19,7 @@ export default function PhotoCard({
   photo,
   isSelected,
   isLocked,
+  allowDownload,
   onToggle,
   onPreview,
 }: PhotoCardProps) {
@@ -69,7 +71,6 @@ export default function PhotoCard({
         )}
         onLoad={() => setLoaded(true)}
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        unoptimized
       />
 
       {/* Hover overlay */}
@@ -102,16 +103,26 @@ export default function PhotoCard({
         </div>
       )}
 
-      {/* Preview button */}
-      <button
-        onClick={handlePreviewClick}
-        className={cn(
-          "absolute bottom-2 right-2 bg-white/90 text-[#2B2B2B] text-[10px] font-medium px-2 py-0.5 rounded-full",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-white"
+      {/* Bottom row: preview + optional download */}
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        {allowDownload && (
+          <a
+            href={`/api/photos/${photo._id}/download`}
+            download
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white/90 text-[#2B2B2B] w-6 h-6 rounded-full flex items-center justify-center hover:bg-white"
+            title="Download"
+          >
+            <Download size={11} />
+          </a>
         )}
-      >
-        View
-      </button>
+        <button
+          onClick={handlePreviewClick}
+          className="bg-white/90 text-[#2B2B2B] text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-white"
+        >
+          View
+        </button>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ interface MasonryGridProps {
   photos: IPhoto[];
   selected: Set<string>;
   isLocked: boolean;
+  allowDownload?: boolean;
   onToggle: (id: string) => void;
   onPreview: (photo: IPhoto) => void;
 }
@@ -25,6 +26,7 @@ export default function MasonryGrid({
   photos,
   selected,
   isLocked,
+  allowDownload,
   onToggle,
   onPreview,
 }: MasonryGridProps) {
@@ -52,6 +54,7 @@ export default function MasonryGrid({
           photo={photo}
           isSelected={selected.has(photo._id)}
           isLocked={isLocked}
+          allowDownload={allowDownload}
           onToggle={onToggle}
           onPreview={onPreview}
         />

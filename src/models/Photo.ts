@@ -12,6 +12,7 @@ export interface IPhotoDocument extends Document {
   isBlurry: boolean;
   popularity: number;
   order: number;
+  category: string;
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const PhotoSchema = new Schema<IPhotoDocument>(
     isBlurry: { type: Boolean, default: false },
     popularity: { type: Number, default: 0 },
     order: { type: Number, default: 0 },
+    category: { type: String, default: "General" },
   },
   { timestamps: true }
 );

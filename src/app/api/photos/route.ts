@@ -5,7 +5,7 @@ import Event from "@/models/Event";
 import { getSession } from "@/lib/utils/session";
 import { ok, err } from "@/lib/utils/response";
 
-// GET /api/photos?eventId=xxx  — fetch all photos for an event
+// GET /api/photos?eventId=xxx&page=1&limit=40  — fetch photos for an event (paginated)
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return err("Unauthorized", 401);
@@ -20,9 +20,23 @@ export async function GET(req: NextRequest) {
     return err("Forbidden", 403);
   }
 
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "40", 10)));
+  const category = searchParams.get("category") ?? null;
+
   await connectDB();
-  const photos = await Photo.find({ eventId }).sort({ order: 1, createdAt: 1 });
-  return ok(photos);
+  const filter: Record<string, unknown> = { eventId };
+  if (category) filter.category = category;
+
+  const [photos, total] = await Promise.all([
+    Photo.find(filter)
+      .sort({ order: 1, createdAt: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Photo.countDocuments(filter),
+  ]);
+
+  return ok({ photos, total, page, limit, hasMore: page * limit < total });
 }
 
 // POST /api/photos — Admin: add photos to an event (bulk from Drive)

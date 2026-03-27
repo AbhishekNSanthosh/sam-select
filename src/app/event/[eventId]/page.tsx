@@ -1,51 +1,41 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { LogOut, Heart } from "lucide-react";
+import Image from "next/image";
+import { LogOut, Heart, Folder } from "lucide-react";
 import Logo from "@/components/layout/Logo";
-import MasonryGrid from "@/components/gallery/MasonryGrid";
-import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import SelectionBar from "@/components/selection/SelectionBar";
-import SelectionDrawer from "@/components/selection/SelectionDrawer";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import Badge from "@/components/ui/Badge";
-import { useSelection } from "@/hooks/useSelection";
 import { useToast } from "@/components/ui/Toast";
-import type { IPhoto, IEvent, IAlbum } from "@/types";
-
-type PageStatus = "loading" | "ready" | "error" | "success";
+import type { IEvent, IAlbum } from "@/types";
+import type { CategorySummary } from "@/app/api/admin/events/[eventId]/categories/route";
 
 export default function EventGalleryPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [status, setStatus] = useState<PageStatus>("loading");
   const [event, setEvent] = useState<IEvent | null>(null);
-  const [photos, setPhotos] = useState<IPhoto[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [album, setAlbum] = useState<IAlbum | null>(null);
-  const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { selected, count, toggle, remove, isSelected, selectedArray, setSelected } =
-    useSelection();
+  const selectedCount = album?.selectedPhotoIds?.length ?? 0;
+  const isLocked = album?.status === "submitted" || album?.status === "approved";
 
-  const isLocked =
-    album?.status === "submitted" || album?.status === "approved";
-
-  // Load event, photos, and existing selection
   useEffect(() => {
     async function load() {
       try {
-        const [evRes, phRes, selRes] = await Promise.all([
+        const [evRes, catRes, selRes] = await Promise.all([
           fetch(`/api/events/${eventId}`),
-          fetch(`/api/photos?eventId=${eventId}`),
+          fetch(`/api/events/${eventId}/categories`),
           fetch("/api/selections"),
         ]);
 
@@ -54,65 +44,22 @@ export default function EventGalleryPage() {
           return;
         }
 
-        const [evData, phData, selData] = await Promise.all([
-          evRes.json(),
-          phRes.json(),
-          selRes.json(),
+        const [evData, catData, selData] = await Promise.all([
+          evRes.json(), catRes.json(), selRes.json(),
         ]);
 
         if (!evData.success) throw new Error("Failed to load event");
-
         setEvent(evData.data);
-        setPhotos(phData.success ? phData.data : []);
-
-        if (selData.success) {
-          const al: IAlbum = selData.data;
-          setAlbum(al);
-          setSelected(new Set(al.selectedPhotoIds.map((id: string | { _id: string }) =>
-            typeof id === "string" ? id : id._id
-          )));
-        }
-
-        setStatus("ready");
+        if (catData.success) setCategories(catData.data);
+        if (selData.success) setAlbum(selData.data);
       } catch {
-        setStatus("error");
+        router.replace("/login");
+      } finally {
+        setLoading(false);
       }
     }
     load();
-  }, [eventId, router, setSelected]);
-
-  // Auto-save selection (debounced)
-  const saveSelection = useCallback(
-    (ids: string[]) => {
-      if (isLocked) return;
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(async () => {
-        await fetch("/api/selections", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ selectedPhotoIds: ids }),
-        });
-      }, 1200);
-    },
-    [isLocked]
-  );
-
-  function handleToggle(id: string) {
-    if (isLocked) return;
-    toggle(id);
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    saveSelection(Array.from(next));
-  }
-
-  function handleRemove(id: string) {
-    if (isLocked) return;
-    remove(id);
-    const next = new Set(selected);
-    next.delete(id);
-    saveSelection(Array.from(next));
-  }
+  }, [eventId, router]);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -124,7 +71,6 @@ export default function EventGalleryPage() {
       } else {
         setAlbum((prev) => prev ? { ...prev, status: "submitted" } : prev);
         setConfirmOpen(false);
-        setStatus("success");
       }
     } catch {
       toast("Something went wrong. Please try again.", "error");
@@ -134,11 +80,12 @@ export default function EventGalleryPage() {
   }
 
   async function handleLogout() {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   }
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#FBF9F6] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -149,42 +96,23 @@ export default function EventGalleryPage() {
     );
   }
 
-  if (status === "error") {
-    return (
-      <div className="min-h-screen bg-[#FBF9F6] flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="font-display text-lg text-[#2B2B2B] mb-2">Oops! Something went wrong.</p>
-          <p className="text-sm text-[#6B6B6B] mb-4">Please try again or contact Sam&apos;s Creations.</p>
-          <Button onClick={() => router.push("/login")}>Go back</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "success") {
+  if (album?.status === "submitted" || album?.status === "approved") {
     return (
       <div className="min-h-screen bg-[#FBF9F6] flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-sm w-full animate-fade-in">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center mx-auto mb-6 shadow-lg">
             <Heart size={32} className="text-white fill-white" />
           </div>
-          <h1 className="font-display text-3xl text-[#2B2B2B] mb-3">
-            Album Submitted!
-          </h1>
-          <p className="text-[#6B6B6B] leading-relaxed mb-2">
-            Your album has been submitted 💛
-          </p>
+          <h1 className="font-display text-3xl text-[#2B2B2B] mb-3">Album Submitted!</h1>
+          <p className="text-[#6B6B6B] leading-relaxed mb-2">Your album has been submitted 💛</p>
           <p className="text-[#6B6B6B] text-sm mb-8">
-            Sam&apos;s Creations will review your {count} selected photos and create your perfect album.
-            We&apos;ll be in touch soon!
+            Sam&apos;s Creations will review your {selectedCount} selected photos and create your perfect album.
           </p>
           <div className="bg-[#D6C3A3]/10 rounded-xl p-4 border border-[#D6C3A3]/20 mb-6">
             <p className="text-sm text-[#2B2B2B] font-medium">{event?.name}</p>
-            <p className="text-xs text-[#6B6B6B] mt-0.5">{count} photos selected</p>
+            <p className="text-xs text-[#6B6B6B] mt-0.5">{selectedCount} photos selected</p>
           </div>
-          <Button variant="outline" onClick={handleLogout} className="w-full">
-            Exit Gallery
-          </Button>
+          <Button variant="outline" onClick={handleLogout} className="w-full">Exit Gallery</Button>
         </div>
       </div>
     );
@@ -197,9 +125,7 @@ export default function EventGalleryPage() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
-            {isLocked && (
-              <Badge variant="green">Submitted</Badge>
-            )}
+            {isLocked && <Badge variant="green">Submitted</Badge>}
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition-colors"
@@ -211,109 +137,89 @@ export default function EventGalleryPage() {
         </div>
       </header>
 
-      {/* Event Hero */}
       <div className="max-w-7xl mx-auto px-4 pt-8 pb-4">
-        <div className="mb-6 animate-fade-in">
+        {/* Hero */}
+        <div className="mb-8 animate-fade-in">
           <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
             {event?.clientName}&apos;s Gallery
           </p>
-          <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">
-            {event?.name}
-          </h1>
+          <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">{event?.name}</h1>
           <p className="text-[#6B6B6B] text-sm">
-            {photos.length} photos · {isLocked ? "Album submitted" : "Tap to select your favourites"}
+            {categories.reduce((s, c) => s + c.count, 0)} photos ·{" "}
+            {isLocked ? "Album submitted" : "Choose a folder to start selecting"}
             {event?.minSelection && !isLocked && ` · Minimum ${event.minSelection} photos`}
             {event?.maxSelection && !isLocked && `, maximum ${event.maxSelection}`}
           </p>
         </div>
 
-        {/* Locked banner */}
-        {isLocked && (
-          <div className="bg-[#D6C3A3]/10 border border-[#D6C3A3]/25 rounded-xl p-4 mb-6 animate-fade-in flex items-center gap-3">
-            <Heart size={18} className="text-[#D6C3A3] shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-[#2B2B2B]">Your album has been submitted</p>
-              <p className="text-xs text-[#6B6B6B]">
-                {selectedArray.length} photos selected · Sam&apos;s Creations will be in touch soon.
-              </p>
-            </div>
+        {/* Folder grid */}
+        {categories.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <Folder size={36} className="text-[#D6C3A3] mb-4" />
+            <p className="font-display text-lg text-[#2B2B2B] mb-1">No photos yet</p>
+            <p className="text-sm text-[#6B6B6B]">Check back soon — Sam is uploading your photos.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => router.push(`/event/${eventId}/folder/${encodeURIComponent(cat.name)}`)}
+                className="group relative rounded-2xl overflow-hidden aspect-video bg-[#EDE7DD] text-left hover:ring-2 hover:ring-[#D6C3A3] transition-all shadow-sm hover:shadow-md"
+              >
+                {cat.cover && (
+                  <Image
+                    src={cat.cover.replace(/=s\d+$/, "=s600")}
+                    alt={cat.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    unoptimized
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <p className="text-white font-display text-lg truncate">{cat.name}</p>
+                  <p className="text-white/70 text-sm">{cat.count} photos</p>
+                </div>
+              </button>
+            ))}
           </div>
         )}
 
-        {/* Gallery */}
-        <MasonryGrid
-          photos={photos}
-          selected={selected}
-          isLocked={isLocked}
-          onToggle={handleToggle}
-          onPreview={setPreviewPhoto}
-        />
-
-        {/* Bottom padding for sticky bar */}
         <div className="h-32" />
       </div>
 
       {/* Sticky selection bar */}
       <SelectionBar
-        count={count}
+        count={selectedCount}
         isLocked={isLocked}
         submitting={submitting}
-        onViewSelection={() => setDrawerOpen(true)}
+        onViewSelection={() => {
+          // Navigate to first folder to view selection
+          if (categories.length > 0) {
+            router.push(`/event/${eventId}/folder/${encodeURIComponent(categories[0].name)}`);
+          }
+        }}
         onSubmit={() => setConfirmOpen(true)}
       />
 
-      {/* Selection drawer */}
-      <SelectionDrawer
-        open={drawerOpen}
-        photos={photos}
-        selectedIds={selected}
-        isLocked={isLocked}
-        onClose={() => setDrawerOpen(false)}
-        onRemove={handleRemove}
-      />
-
-      {/* Lightbox */}
-      {previewPhoto && (
-        <PhotoLightbox
-          photo={previewPhoto}
-          photos={photos}
-          isSelected={isSelected(previewPhoto._id)}
-          isLocked={isLocked}
-          onClose={() => setPreviewPhoto(null)}
-          onToggle={handleToggle}
-          onNavigate={setPreviewPhoto}
-        />
-      )}
-
       {/* Submit confirmation modal */}
-      <Modal
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title="Submit Your Album?"
-      >
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Submit Your Album?">
         <div className="space-y-4">
           <p className="text-[#6B6B6B] text-sm leading-relaxed">
-            You&apos;re about to submit <strong className="text-[#2B2B2B]">{count} photos</strong> for
+            You&apos;re about to submit <strong className="text-[#2B2B2B]">{selectedCount} photos</strong> for
             your album. Once submitted, your selection will be locked.
           </p>
           <div className="bg-[#FBF9F6] rounded-xl p-4 border border-[#EDE7DD]">
             <p className="text-sm font-medium text-[#2B2B2B]">{event?.name}</p>
-            <p className="text-xs text-[#6B6B6B] mt-0.5">{count} photos selected</p>
+            <p className="text-xs text-[#6B6B6B] mt-0.5">{selectedCount} photos selected</p>
           </div>
           <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setConfirmOpen(false)}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>
               Go Back
             </Button>
-            <Button
-              variant="gold"
-              className="flex-1"
-              loading={submitting}
-              onClick={handleSubmit}
-            >
+            <Button variant="gold" className="flex-1" loading={submitting} onClick={handleSubmit}>
               Yes, Submit
             </Button>
           </div>

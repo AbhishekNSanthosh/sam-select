@@ -2,9 +2,26 @@ import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import Photo from "@/models/Photo";
 import Event from "@/models/Event";
-import { listFolderImages } from "@/lib/drive/service";
+import { listFolderImages, grantPublicAccess, getFolderName } from "@/lib/drive/service";
 import { getSession } from "@/lib/utils/session";
 import { ok, err } from "@/lib/utils/response";
+
+// GET /api/admin/events/[eventId]/sync-drive?folderId=<id>
+export async function GET(req: NextRequest) {
+  const session = await getSession();
+  if (!session || session.eventId !== "admin") return err("Unauthorized", 401);
+
+  const folderId = req.nextUrl.searchParams.get("folderId");
+  if (!folderId) return err("folderId is required");
+
+  try {
+    const name = await getFolderName(folderId);
+    if (!name) return err("Folder not found", 404);
+    return ok({ name });
+  } catch {
+    return err("Could not fetch folder — check the ID and Drive permissions", 404);
+  }
+}
 
 // POST /api/admin/events/[eventId]/sync-drive
 // Syncs photos from a Google Drive folder into the event
@@ -40,6 +57,10 @@ export async function POST(
   if (newFiles.length === 0) {
     return ok({ synced: 0, message: "All photos already synced" });
   }
+
+  // Grant public read on newly synced files so browsers can load them directly.
+  // Errors are non-fatal (e.g. service account lacks permission on externally-owned files).
+  await Promise.allSettled(newFiles.map((f) => grantPublicAccess(f.id)));
 
   const docs = newFiles.map((f, i) => ({
     eventId,
