@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { LogOut, Heart, Folder } from "lucide-react";
@@ -11,7 +11,10 @@ import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import Badge from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import type { IEvent, IAlbum } from "@/types";
+import SelectionDrawer from "@/components/selection/SelectionDrawer";
+import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import { useSelection } from "@/hooks/useSelection";
+import type { IEvent, IAlbum, IPhoto } from "@/types";
 import type { CategorySummary } from "@/app/api/admin/events/[eventId]/categories/route";
 
 export default function EventGalleryPage() {
@@ -23,12 +26,15 @@ export default function EventGalleryPage() {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [album, setAlbum] = useState<IAlbum | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authFailed, setAuthFailed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedCount = album?.selectedPhotoIds?.length ?? 0;
-  const isLocked = album?.status === "submitted" || album?.status === "approved";
+  const { selected, count: selectedCount, toggle, remove, isSelected, setSelected } = useSelection();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
+  const isLocked = album?.status === "approved" || event?.status === "locked";
 
   useEffect(() => {
     async function load() {
@@ -40,7 +46,8 @@ export default function EventGalleryPage() {
         ]);
 
         if (evRes.status === 401 || evRes.status === 403) {
-          router.replace("/login");
+          setAuthFailed(true);
+          window.location.href = `/api/auth/event-login?eventId=${eventId}`;
           return;
         }
 
@@ -51,15 +58,53 @@ export default function EventGalleryPage() {
         if (!evData.success) throw new Error("Failed to load event");
         setEvent(evData.data);
         if (catData.success) setCategories(catData.data);
-        if (selData.success) setAlbum(selData.data);
+        if (selData.success) {
+          setAlbum(selData.data);
+          setSelected(new Set(selData.data.selectedPhotoIds.map((id: string | { _id: string }) =>
+            typeof id === "string" ? id : id._id
+          )));
+        }
       } catch {
-        router.replace("/login");
+        setAuthFailed(true);
+        window.location.href = `/api/auth/event-login?eventId=${eventId}`;
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [eventId, router]);
+  }, [eventId, router, setSelected]);
+
+  const saveSelection = useCallback(
+    (ids: string[]) => {
+      if (isLocked) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(async () => {
+        await fetch("/api/selections", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedPhotoIds: ids }),
+        });
+      }, 1200);
+    },
+    [isLocked]
+  );
+
+  function handleRemove(id: string) {
+    if (isLocked) return;
+    remove(id);
+    const next = new Set(selected);
+    next.delete(id);
+    saveSelection(Array.from(next));
+  }
+
+  function handleToggle(id: string) {
+    if (isLocked) return;
+    toggle(id);
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    saveSelection(Array.from(next));
+  }
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -82,47 +127,58 @@ export default function EventGalleryPage() {
   async function handleLogout() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    router.push(event?.shareToken ? `/g/${event.shareToken}` : "/login");
+  }
+
+  if (authFailed) {
+    return (
+      <div className="min-h-screen bg-[#FBF9F6] flex flex-col items-center justify-center animate-fade-in">
+        <Logo className="mb-6 scale-110" />
+        <div className="flex gap-1.5 items-center">
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "0ms" }} />
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "150ms" }} />
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "300ms" }} />
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FBF9F6] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner className="w-8 h-8" />
-          <p className="text-sm text-[#6B6B6B] font-display italic">Loading your gallery…</p>
+      <div className="min-h-screen bg-[#FBF9F6]">
+        {/* Skeleton header */}
+        <header className="sticky top-0 z-20 glass border-b border-[#D6C3A3]/15">
+          <div className="px-[5vw] py-3 flex items-center justify-between">
+            <div className="skeleton h-7 w-36 rounded-lg" />
+            <div className="skeleton h-6 w-16 rounded-lg" />
+          </div>
+        </header>
+
+        <div className="px-[5vw] pt-8 pb-4">
+          {/* Skeleton hero */}
+          <div className="mb-8 space-y-3">
+            <div className="skeleton h-3 w-28 rounded-full" />
+            <div className="skeleton h-9 w-64 rounded-xl" />
+            <div className="skeleton h-4 w-48 rounded-full" />
+          </div>
+
+          {/* Skeleton folder grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton rounded-2xl aspect-video" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  if (album?.status === "submitted" || album?.status === "approved") {
-    return (
-      <div className="min-h-screen bg-[#FBF9F6] flex flex-col items-center justify-center p-6 text-center">
-        <div className="max-w-sm w-full animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Heart size={32} className="text-white fill-white" />
-          </div>
-          <h1 className="font-display text-3xl text-[#2B2B2B] mb-3">Album Submitted!</h1>
-          <p className="text-[#6B6B6B] leading-relaxed mb-2">Your album has been submitted 💛</p>
-          <p className="text-[#6B6B6B] text-sm mb-8">
-            Sam&apos;s Creations will review your {selectedCount} selected photos and create your perfect album.
-          </p>
-          <div className="bg-[#D6C3A3]/10 rounded-xl p-4 border border-[#D6C3A3]/20 mb-6">
-            <p className="text-sm text-[#2B2B2B] font-medium">{event?.name}</p>
-            <p className="text-xs text-[#6B6B6B] mt-0.5">{selectedCount} photos selected</p>
-          </div>
-          <Button variant="outline" onClick={handleLogout} className="w-full">Exit Gallery</Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#FBF9F6]">
       {/* Header */}
       <header className="sticky top-0 z-20 glass border-b border-[#D6C3A3]/15">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="px-[5vw] py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-3">
             {isLocked && <Badge variant="green">Submitted</Badge>}
@@ -137,7 +193,7 @@ export default function EventGalleryPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 pt-8 pb-4">
+      <div className="px-[5vw] pt-8 pb-4">
         {/* Hero */}
         <div className="mb-8 animate-fade-in">
           <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
@@ -161,7 +217,7 @@ export default function EventGalleryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {categories.map((cat) => (
+            {categories.map((cat, i) => (
               <button
                 key={cat.name}
                 onClick={() => router.push(`/event/${eventId}/folder/${encodeURIComponent(cat.name)}`)}
@@ -172,6 +228,7 @@ export default function EventGalleryPage() {
                     src={cat.cover.replace(/=s\d+$/, "=s600")}
                     alt={cat.name}
                     fill
+                    priority={i < 4}
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     unoptimized
@@ -190,19 +247,37 @@ export default function EventGalleryPage() {
         <div className="h-32" />
       </div>
 
-      {/* Sticky selection bar */}
       <SelectionBar
         count={selectedCount}
         isLocked={isLocked}
         submitting={submitting}
-        onViewSelection={() => {
-          // Navigate to first folder to view selection
-          if (categories.length > 0) {
-            router.push(`/event/${eventId}/folder/${encodeURIComponent(categories[0].name)}`);
-          }
-        }}
+        isSubmitted={album?.status === "submitted"}
+        onViewSelection={() => setDrawerOpen(true)}
         onSubmit={() => setConfirmOpen(true)}
       />
+
+      <SelectionDrawer
+        open={drawerOpen}
+        selectedIds={selected}
+        isLocked={isLocked}
+        onClose={() => setDrawerOpen(false)}
+        onRemove={handleRemove}
+        onPreview={setPreviewPhoto}
+      />
+
+      {previewPhoto && (
+        <PhotoLightbox
+          photo={previewPhoto}
+          photos={[previewPhoto]}
+          totalPhotos={1}
+          isSelected={isSelected(previewPhoto._id)}
+          isLocked={isLocked}
+          allowDownload={event?.allowDownload}
+          onClose={() => setPreviewPhoto(null)}
+          onToggle={handleToggle}
+          onNavigate={setPreviewPhoto}
+        />
+      )}
 
       {/* Submit confirmation modal */}
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Submit Your Album?">

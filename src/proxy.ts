@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/g/", "/api/auth/invite/", "/api/auth/event-login"];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public paths
@@ -22,12 +22,25 @@ export function middleware(req: NextRequest) {
   // Check session cookie
   const sessionCookie = req.cookies.get("ss_session");
   if (!sessionCookie?.value) {
+    // If trying to access an event without a session, route to the event's specific PIN page
+    if (pathname.startsWith("/event/")) {
+      const parts = pathname.split("/");
+      if (parts.length >= 3) {
+        return NextResponse.redirect(new URL(`/api/auth/event-login?eventId=${parts[2]}`, req.url));
+      }
+    }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
   try {
     const session = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf-8"));
     if (session.expiresAt < Date.now()) {
+      if (pathname.startsWith("/event/")) {
+        const parts = pathname.split("/");
+        if (parts.length >= 3) {
+          return NextResponse.redirect(new URL(`/api/auth/event-login?eventId=${parts[2]}`, req.url));
+        }
+      }
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
@@ -41,6 +54,12 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/admin", req.url));
     }
   } catch {
+    if (pathname.startsWith("/event/")) {
+      const parts = pathname.split("/");
+      if (parts.length >= 3) {
+        return NextResponse.redirect(new URL(`/api/auth/event-login?eventId=${parts[2]}`, req.url));
+      }
+    }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 

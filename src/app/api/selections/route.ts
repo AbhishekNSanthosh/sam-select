@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db/connect";
 import Album from "@/models/Album";
+import "@/models/Photo"; // Ensure Photo model is registered for populate
 import { getSession } from "@/lib/utils/session";
 import { ok, err } from "@/lib/utils/response";
 
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest) {
   const album = await Album.findOne({ eventId: session.eventId });
   if (!album) return err("Album not found", 404);
 
-  if (album.status === "submitted" || album.status === "approved") {
+  if (album.status === "approved") {
     return err("Album is locked and cannot be modified", 403);
   }
 

@@ -13,15 +13,6 @@ interface Props {
   description: string | null;
 }
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
-
 export default function InviteForm({
   token,
   clientName,
@@ -124,98 +115,69 @@ export default function InviteForm({
   }
 
   return (
-    <div className="bg-white rounded-2xl card-shadow overflow-hidden">
-      {/* Personal header */}
-      <div className="bg-gradient-to-br from-[#EDE7DD] to-[#D6C3A3]/30 px-8 pt-8 pb-6 text-center border-b border-[#D6C3A3]/20">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#C8A96A] to-[#B89B72] flex items-center justify-center mx-auto mb-4 shadow-md">
-          <span className="font-display text-xl text-white tracking-wide">
-            {initials(clientName)}
-          </span>
-        </div>
+    <div className="bg-white rounded-3xl p-5 sm:p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-[#EDE7DD]/50">
+      <p className="text-center text-sm text-[#6B6B6B] mb-6 leading-relaxed">
+        Enter the PIN provided by Sam&apos;s Creations to access your personal gallery.
+      </p>
 
-        <p className="text-xs tracking-[0.2em] uppercase text-[#B89B72] mb-1 font-medium">
-          Welcome
-        </p>
-        <h1 className="font-display text-2xl text-[#2B2B2B] mb-4">
-          {clientName}
-        </h1>
-
-        <div className="inline-flex flex-col items-center bg-white/70 rounded-xl px-5 py-3 border border-[#D6C3A3]/30 w-full">
-          <p className="font-display text-sm text-[#2B2B2B] font-medium">{eventName}</p>
-          {formattedDate && (
-            <p className="text-xs text-[#6B6B6B] mt-0.5">{formattedDate}</p>
-          )}
-          {description && (
-            <p className="text-xs text-[#6B6B6B] mt-1 italic">{description}</p>
-          )}
-        </div>
-      </div>
-
-      {/* PIN section */}
-      <div className="px-8 py-7">
-        <p className="text-center text-sm text-[#6B6B6B] mb-6 leading-relaxed">
-          Enter the PIN provided by Sam&apos;s Creations to access your personal gallery.
-        </p>
-
-        <div
-          className={cn(
-            "flex gap-2 justify-center mb-5",
-            shake && "animate-[wiggle_0.5s_ease]"
-          )}
-        >
-          {pin.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => { inputRefs.current[i] = el; }}
-              type="text"
-              inputMode="text"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={handlePaste}
-              disabled={locked}
-              className={cn(
-                "w-11 h-14 text-center text-xl font-display rounded-xl border-2 outline-none transition-all duration-200",
-                "bg-[#FBF9F6] text-[#2B2B2B]",
-                digit
-                  ? "border-[#D6C3A3] bg-[#D6C3A3]/5"
-                  : "border-[#EDE7DD] focus:border-[#D6C3A3] focus:bg-white focus:ring-2 focus:ring-[#D6C3A3]/20",
-                error && "border-red-400 bg-red-50",
-                locked && "opacity-50 cursor-not-allowed"
-              )}
-              autoComplete="off"
-              autoFocus={i === 0}
-            />
-          ))}
-        </div>
-
-        {error && (
-          <p className="text-center text-sm text-red-500 mb-4 animate-fade-in leading-snug">
-            {error}
-          </p>
+      <div
+        className={cn(
+          "flex gap-1.5 sm:gap-2 justify-center mb-5",
+          shake && "animate-[wiggle_0.5s_ease]"
         )}
-
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={handleSubmit}
-          loading={loading}
-          disabled={locked || pinStr.replace(/\s/g, "").length < 4}
-        >
-          {loading ? "Verifying…" : "Enter My Gallery"}
-        </Button>
-
-        <p className="text-center text-xs text-[#6B6B6B] mt-4">
-          Need help?{" "}
-          <a
-            href="mailto:hello@samscreations.com"
-            className="text-[#D6C3A3] hover:underline"
-          >
-            Contact Sam&apos;s Creations
-          </a>
-        </p>
+      >
+        {pin.map((digit, i) => (
+          <input
+            key={i}
+            ref={(el) => { inputRefs.current[i] = el; }}
+            type="text"
+            inputMode="numeric"
+            maxLength={1}
+            value={digit}
+            onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onPaste={handlePaste}
+            disabled={locked}
+            className={cn(
+              "w-9 h-11 sm:w-12 sm:h-16 text-center text-lg sm:text-2xl font-display rounded-xl border-2 outline-none transition-all duration-200",
+              "bg-[#FBF9F6] text-[#2B2B2B]",
+              digit
+                ? "border-[#D6C3A3] bg-[#D6C3A3]/5"
+                : "border-[#EDE7DD] focus:border-[#D6C3A3] focus:bg-white focus:ring-2 focus:ring-[#D6C3A3]/30",
+              error && "border-red-400 bg-red-50",
+              locked && "opacity-50 cursor-not-allowed"
+            )}
+            autoComplete="off"
+            autoFocus={i === 0}
+          />
+        ))}
       </div>
+
+      {error && (
+        <p className="text-center text-sm text-red-500 mb-4 animate-fade-in leading-snug">
+          {error}
+        </p>
+      )}
+
+      <Button
+        className="w-full h-12 text-base shadow-lg shadow-[#D6C3A3]/20 hover:shadow-xl hover:shadow-[#D6C3A3]/30 transition-shadow"
+        size="lg"
+        onClick={handleSubmit}
+        loading={loading}
+        disabled={locked || pinStr.replace(/\s/g, "").length < 4}
+      >
+        {loading ? "Verifying…" : "Enter My Gallery"}
+      </Button>
+
+      <p className="text-center text-xs text-[#6B6B6B] mt-6">
+        Need help?{" "}
+        <a
+          href="mailto:hello@samscreations.com"
+          className="text-[#D6C3A3] hover:text-[#B89B72] hover:underline transition-colors font-medium"
+        >
+          Contact Sam&apos;s Creations
+        </a>
+      </p>
 
       <style>{`
         @keyframes wiggle {

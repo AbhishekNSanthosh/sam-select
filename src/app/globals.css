@@ -14,7 +14,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--text);
-  --font-display: var(--font-playfair), serif;
+  --font-display: var(--font-outfit), sans-serif;
   --font-body: var(--font-outfit), sans-serif;
 }
 
@@ -35,7 +35,7 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-playfair), serif;
+  font-family: var(--font-outfit), sans-serif;
 }
 
 /* Custom scrollbar */
@@ -137,7 +137,7 @@ body {
 /* PIN input style */
 .pin-input {
   letter-spacing: 0.5em;
-  font-family: var(--font-playfair), serif;
+  font-family: var(--font-outfit), sans-serif;
   font-size: 1.5rem;
   text-align: center;
 }

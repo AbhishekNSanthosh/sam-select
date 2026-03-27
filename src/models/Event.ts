@@ -40,7 +40,6 @@ const EventSchema = new Schema<IEventDocument>(
 );
 
 EventSchema.index({ pin: 1 });
-EventSchema.index({ shareToken: 1 });
 EventSchema.index({ status: 1 });
 
 const Event: Model<IEventDocument> =

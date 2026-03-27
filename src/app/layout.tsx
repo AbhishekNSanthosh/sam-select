@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, Playfair_Display } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 
@@ -10,13 +10,6 @@ const outfit = Outfit({
   display: "swap",
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-playfair",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "SamSelect – Sam's Creations Album Selection",
@@ -43,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`h-full antialiased ${outfit.variable} ${playfair.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`h-full antialiased ${outfit.variable}`}>
       <body className="min-h-full flex flex-col bg-[#FBF9F6]">
         <ToastProvider>{children}</ToastProvider>
       </body>

@@ -31,6 +31,7 @@ export default function EventFolderPage() {
   const [loading, setLoading] = useState(true);
   const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +40,7 @@ export default function EventFolderPage() {
 
   const { selected, count, toggle, remove, isSelected, setSelected } = useSelection();
 
-  const isLocked = album?.status === "submitted" || album?.status === "approved";
+  const isLocked = album?.status === "approved" || event?.status === "locked";
 
   useEffect(() => {
     async function load() {
@@ -51,7 +52,8 @@ export default function EventFolderPage() {
         ]);
 
         if (evRes.status === 401 || evRes.status === 403) {
-          router.replace("/login");
+          setAuthFailed(true);
+          window.location.href = `/api/auth/event-login?eventId=${eventId}`;
           return;
         }
 
@@ -77,7 +79,8 @@ export default function EventFolderPage() {
           )));
         }
       } catch {
-        router.replace("/login");
+        setAuthFailed(true);
+        window.location.href = `/api/auth/event-login?eventId=${eventId}`;
       } finally {
         setLoading(false);
       }
@@ -167,25 +170,74 @@ export default function EventFolderPage() {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    router.push(event?.shareToken ? `/g/${event.shareToken}` : "/login");
   }
 
-  if (loading) {
+  // Staggered heights to mimic masonry
+  const skeletonHeights = [260, 200, 320, 180, 280, 220, 300, 190, 240, 310, 200, 260];
+
+  if (authFailed) {
     return (
-      <div className="min-h-screen bg-[#FBF9F6] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Spinner className="w-8 h-8" />
-          <p className="text-sm text-[#6B6B6B] font-display italic">Loading…</p>
+      <div className="min-h-screen bg-[#FBF9F6] flex flex-col items-center justify-center animate-fade-in">
+        <Logo className="mb-6 scale-110" />
+        <div className="flex gap-1.5 items-center">
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "0ms" }} />
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "150ms" }} />
+          <div className="w-2 h-2 rounded-full bg-[#D6C3A3] animate-bounce" style={{ animationDelay: "300ms" }} />
         </div>
       </div>
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FBF9F6]">
+        {/* Skeleton header */}
+        <header className="sticky top-0 z-20 glass border-b border-[#D6C3A3]/15">
+          <div className="px-[5vw] py-3 flex items-center justify-between">
+            <div className="skeleton h-7 w-36 rounded-lg" />
+            <div className="skeleton h-6 w-12 rounded-lg" />
+          </div>
+        </header>
+
+        <div className="px-[5vw] pt-6 pb-4">
+          {/* Skeleton back link */}
+          <div className="skeleton h-4 w-24 rounded-full mb-6" />
+
+          {/* Skeleton hero */}
+          <div className="mb-6 space-y-3">
+            <div className="skeleton h-3 w-28 rounded-full" />
+            <div className="skeleton h-9 w-52 rounded-xl" />
+            <div className="skeleton h-4 w-40 rounded-full" />
+          </div>
+
+          {/* Skeleton masonry — 2 cols mobile, 3 cols sm, 4 cols lg */}
+          <div className="flex gap-3">
+            {[0, 1, 2, 3].map((col) => (
+              <div key={col} className={`flex-1 flex flex-col gap-3 ${col >= 2 ? "hidden sm:flex" : ""} ${col === 3 ? "!hidden lg:!flex" : ""}`}>
+                {skeletonHeights
+                  .filter((_, i) => i % 4 === col)
+                  .map((h, i) => (
+                    <div
+                      key={i}
+                      className="skeleton w-full rounded-xl"
+                      style={{ height: h }}
+                    />
+                  ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="min-h-screen bg-[#FBF9F6]">
       {/* Header */}
       <header className="sticky top-0 z-20 glass border-b border-[#D6C3A3]/15">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="px-[5vw] py-3 flex items-center justify-between">
           <Logo />
           <button
             onClick={handleLogout}
@@ -197,7 +249,7 @@ export default function EventFolderPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 pt-6 pb-4">
+      <div className="px-[5vw] pt-6 pb-4">
         {/* Back */}
         <button
           onClick={() => router.push(`/event/${eventId}`)}
@@ -247,17 +299,18 @@ export default function EventFolderPage() {
         count={count}
         isLocked={isLocked}
         submitting={submitting}
+        isSubmitted={album?.status === "submitted"}
         onViewSelection={() => setDrawerOpen(true)}
         onSubmit={() => setConfirmOpen(true)}
       />
 
       <SelectionDrawer
         open={drawerOpen}
-        photos={photos}
         selectedIds={selected}
         isLocked={isLocked}
         onClose={() => setDrawerOpen(false)}
         onRemove={handleRemove}
+        onPreview={setPreviewPhoto}
       />
 
       {previewPhoto && (
@@ -267,6 +320,7 @@ export default function EventFolderPage() {
           totalPhotos={totalPhotos}
           isSelected={isSelected(previewPhoto._id)}
           isLocked={isLocked}
+          allowDownload={event?.allowDownload}
           onClose={() => setPreviewPhoto(null)}
           onToggle={handleToggle}
           onNavigate={setPreviewPhoto}

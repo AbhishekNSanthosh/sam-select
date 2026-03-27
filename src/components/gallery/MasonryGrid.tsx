@@ -48,13 +48,14 @@ export default function MasonryGrid({
       className="masonry-grid"
       columnClassName="masonry-col"
     >
-      {photos.map((photo) => (
+      {photos.map((photo, i) => (
         <PhotoCard
           key={photo._id}
           photo={photo}
           isSelected={selected.has(photo._id)}
           isLocked={isLocked}
           allowDownload={allowDownload}
+          priority={i < 8}
           onToggle={onToggle}
           onPreview={onPreview}
         />

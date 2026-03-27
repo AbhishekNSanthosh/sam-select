@@ -21,7 +21,7 @@ export async function GET(
 
   await connectDB();
   const isAdmin = session.eventId === "admin";
-  const event = await Event.findById(eventId).select(isAdmin ? "" : "-pin -shareToken");
+  const event = await Event.findById(eventId).select(isAdmin ? "" : "-pin");
   if (!event) return err("Event not found", 404);
 
   return ok(event);

@@ -18,8 +18,8 @@ export async function POST() {
   if (!album) return err("Album not found", 404);
   if (!event) return err("Event not found", 404);
 
-  if (album.status === "submitted" || album.status === "approved") {
-    return err("Album already submitted", 409);
+  if (album.status === "approved") {
+    return err("Album already approved", 409);
   }
 
   if (album.selectedPhotoIds.length === 0) {
