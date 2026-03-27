@@ -9,6 +9,7 @@ export interface IPhotoDocument extends Document {
   width?: number;
   height?: number;
   aspectRatio?: number;
+  faceDescriptors?: number[][];
   isBlurry: boolean;
   popularity: number;
   order: number;
@@ -31,6 +32,10 @@ const PhotoSchema = new Schema<IPhotoDocument>(
     width: { type: Number },
     height: { type: Number },
     aspectRatio: { type: Number },
+    faceDescriptors: { // Added this block
+      type: [[Number]],
+      default: [],
+    },
     isBlurry: { type: Boolean, default: false },
     popularity: { type: Number, default: 0 },
     order: { type: Number, default: 0 },

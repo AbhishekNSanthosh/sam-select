@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogOut, Heart, Folder } from "lucide-react";
+import { LogOut, Folder, ScanFace } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import SelectionBar from "@/components/selection/SelectionBar";
 import Modal from "@/components/ui/Modal";
@@ -14,6 +14,8 @@ import { useToast } from "@/components/ui/Toast";
 import SelectionDrawer from "@/components/selection/SelectionDrawer";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
 import { useSelection } from "@/hooks/useSelection";
+import SelfieSearch from "@/components/gallery/SelfieSearch";
+import BottomSheet from "@/components/ui/BottomSheet";
 import type { IEvent, IAlbum, IPhoto } from "@/types";
 import type { CategorySummary } from "@/app/api/admin/events/[eventId]/categories/route";
 
@@ -33,6 +35,7 @@ export default function EventGalleryPage() {
 
   const { selected, count: selectedCount, toggle, remove, isSelected, setSelected } = useSelection();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selfieOpen, setSelfieOpen] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
   const isLocked = album?.status === "approved" || event?.status === "locked";
 
@@ -182,6 +185,15 @@ export default function EventGalleryPage() {
           <Logo />
           <div className="flex items-center gap-3">
             {isLocked && <Badge variant="green">Submitted</Badge>}
+            {/* Selfie search icon */}
+            <button
+              onClick={() => setSelfieOpen(true)}
+              title="Find My Photos"
+              className="flex items-center gap-1.5 text-[#6B6B6B] hover:text-[#2B2B2B] transition-colors px-2 py-1.5 rounded-lg hover:bg-[#EDE7DD]"
+            >
+              <ScanFace size={16} />
+              <span className="hidden sm:inline text-sm">Search with Selfie</span>
+            </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition-colors"
@@ -244,6 +256,8 @@ export default function EventGalleryPage() {
           </div>
         )}
 
+
+
         <div className="h-32" />
       </div>
 
@@ -255,6 +269,19 @@ export default function EventGalleryPage() {
         onViewSelection={() => setDrawerOpen(true)}
         onSubmit={() => setConfirmOpen(true)}
       />
+
+      {/* Selfie Search modal sheet */}
+      <BottomSheet open={selfieOpen} onClose={() => setSelfieOpen(false)}>
+        <SelfieSearch
+          eventId={eventId}
+          isLocked={isLocked}
+          allowDownload={event?.allowDownload}
+          selectedIds={selected}
+          onSelectPhoto={(photo) => { setPreviewPhoto(photo); setSelfieOpen(false); }}
+          onTogglePhoto={handleToggle}
+          onClose={() => setSelfieOpen(false)}
+        />
+      </BottomSheet>
 
       <SelectionDrawer
         open={drawerOpen}

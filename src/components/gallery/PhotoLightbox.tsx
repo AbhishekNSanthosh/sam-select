@@ -4,7 +4,6 @@ import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { X, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 import type { IPhoto } from "@/types";
 
@@ -39,6 +38,7 @@ export default function PhotoLightbox({
 
   // Track whether the full-res image has loaded
   const [fullLoaded, setFullLoaded] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Reset loaded state whenever photo changes
   useEffect(() => {
@@ -99,20 +99,45 @@ export default function PhotoLightbox({
         {/* Top-right actions */}
         <div className="flex items-center gap-2">
           {allowDownload && (
-            <a
-              href={`/api/photos/${photo._id}/download`}
-              download
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (downloading) return;
+                setDownloading(true);
+                try {
+                  const res = await fetch(`/api/photos/${photo._id}/download`);
+                  if (!res.ok) throw new Error("Download failed");
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = photo.filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  // Fallback
+                  window.open(`/api/photos/${photo._id}/download`, "_blank");
+                } finally {
+                  setDownloading(false);
+                }
+              }}
               className={cn(
                 "flex items-center gap-1.5 text-sm transition-colors px-3 py-1.5 rounded-xl border hover:border-[#D6C3A3] hover:text-[#2B2B2B]",
                 textMuted,
-                "border-[#EDE7DD]"
+                "border-[#EDE7DD]",
+                downloading && "opacity-70 cursor-not-allowed"
               )}
               title="Download"
-              onClick={(e) => e.stopPropagation()}
             >
-              <Download size={15} />
-              <span className="hidden sm:inline">Download</span>
-            </a>
+              {downloading ? (
+                <div className="w-4 h-4 rounded-full border-2 border-[#D6C3A3] border-t-transparent animate-spin" />
+              ) : (
+                <Download size={15} />
+              )}
+              <span className="hidden sm:inline">{downloading ? "Saving..." : "Download"}</span>
+            </button>
           )}
 
           {!isLocked && (
@@ -153,60 +178,49 @@ export default function PhotoLightbox({
           </button>
         )}
 
-        {/* Image wrapper — stacks thumbnail + full-res */}
-        <div className="relative flex items-center justify-center w-full h-full px-14 sm:px-16 py-4 overflow-hidden touch-none">
-          <TransformWrapper
-            initialScale={1}
-            minScale={1}
-            maxScale={4}
-            wheel={{ step: 0.1 }}
-            doubleClick={{ step: 1 }}
-            centerOnInit
-          >
-            <TransformComponent wrapperClass="!w-full !h-full flex items-center justify-center" contentClass="!w-auto !h-auto">
-              <div className="relative flex items-center justify-center w-full h-full">
-                {/* Blurred thumbnail placeholder — shows instantly, fades out when full-res ready */}
-                <Image
-                  src={photo.thumbnailUrl}
-                  alt=""
-                  aria-hidden
-                  width={photo.width ?? 400}
-                  height={photo.height ?? 300}
-                  className={cn(
-                    "absolute max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg pointer-events-none",
-                    "blur-sm scale-105 transition-opacity duration-300",
-                    fullLoaded ? "opacity-0" : "opacity-100"
-                  )}
-                  priority
-                  unoptimized // avoid double optimizing thumbnail
-                />
+        {/* Image wrapper */}
+        <div className="relative flex items-center justify-center w-full h-full px-14 sm:px-16 py-4">
+          <div className="relative flex items-center justify-center w-full h-full">
+            {/* Thumbnail — shown immediately, sharp (not blurred), fades out once full-res loads */}
+            <Image
+              src={photo.thumbnailUrl}
+              alt={photo.filename}
+              aria-hidden={fullLoaded}
+              width={photo.width ?? 800}
+              height={photo.height ?? 600}
+              className={cn(
+                "absolute max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg pointer-events-none transition-opacity duration-500",
+                fullLoaded ? "opacity-0" : "opacity-100"
+              )}
+              priority
+              unoptimized
+            />
 
-                {/* Full-resolution image */}
-                <Image
-                  key={photo._id}
-                  src={photo.thumbnailUrl.replace(/=s\d+$/, "=s1600")}
-                  alt={photo.filename}
-                  width={photo.width ?? 1200}
-                  height={photo.height ?? 800}
-                  className={cn(
-                    "max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg shadow-md transition-opacity duration-300 select-none",
-                    fullLoaded ? "opacity-100" : "opacity-0"
-                  )}
-                  onLoad={() => setFullLoaded(true)}
-                  unoptimized
-                  draggable={false}
-                />
-              </div>
-            </TransformComponent>
-          </TransformWrapper>
-          {/* Selected badge */}
-          {isSelected && (
-            <div className="absolute top-4 right-16 sm:right-4 flex items-center gap-1.5 bg-[#D6C3A3] text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-scale-in">
-              <Check size={12} className="stroke-[3]" />
-              Selected
-            </div>
-          )}
+            {/* Full-resolution image — loads silently in background, then fades in */}
+            <Image
+              key={photo._id}
+              src={photo.fullUrl || photo.thumbnailUrl}
+              alt={photo.filename}
+              width={photo.width ?? 1200}
+              height={photo.height ?? 800}
+              className={cn(
+                "max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg shadow-md select-none transition-opacity duration-500",
+                fullLoaded ? "opacity-100" : "opacity-0"
+              )}
+              onLoad={() => setFullLoaded(true)}
+              unoptimized
+              draggable={false}
+            />
+          </div>
         </div>
+
+        {/* Selected badge */}
+        {isSelected && (
+          <div className="absolute top-4 right-16 sm:right-4 flex items-center gap-1.5 bg-[#D6C3A3] text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-scale-in">
+            <Check size={12} className="stroke-[3]" />
+            Selected
+          </div>
+        )}
 
         {/* Next arrow */}
         {hasNext && (

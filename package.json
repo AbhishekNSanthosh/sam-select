@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/mongoose": "^5.11.96",
+    "@vladmandic/face-api": "^1.7.15",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "googleapis": "^171.4.0",

@@ -25,7 +25,9 @@ export interface IPhoto {
   filename: string;
   width?: number;
   height?: number;
-  isBlurry?: boolean;
+  aspectRatio?: number;
+  faceDescriptors?: number[][];
+  isBlurry: boolean;
   popularity: number;
   category?: string;
   createdAt: string;

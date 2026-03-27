@@ -25,7 +25,9 @@ import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
+import FaceScanner from "@/components/admin/FaceScanner";
 import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils/cn";
 import type { IEvent, IPhoto, IAlbum } from "@/types";
 import type { CategorySummary } from "@/app/api/admin/events/[eventId]/categories/route";
 
@@ -778,18 +780,31 @@ export default function AdminEventPage() {
           <Input label="Description" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
 
           {/* Download toggle */}
-          <div className="flex items-center gap-3 bg-[#FBF9F6] rounded-xl px-4 py-3 border border-[#EDE7DD]">
-            <input
-              id="allowDownload"
-              type="checkbox"
-              checked={editForm.allowDownload}
-              onChange={(e) => setEditForm({ ...editForm, allowDownload: e.target.checked })}
-              className="w-4 h-4 accent-[#D6C3A3]"
-            />
-            <label htmlFor="allowDownload" className="text-sm text-[#2B2B2B] cursor-pointer select-none">
-              Allow clients to download photos
-            </label>
+          <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3.5 border border-[#EDE7DD]">
+            <div>
+              <h3 className="text-sm font-semibold text-[#2B2B2B] mb-0.5">Allow Photo Downloads</h3>
+              <p className="text-xs text-[#6B6B6B]">Clients can download individual photos</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditForm({ ...editForm, allowDownload: !editForm.allowDownload })}
+              className={cn(
+                "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#D6C3A3] focus:ring-offset-2",
+                editForm.allowDownload ? "bg-[#D6C3A3]" : "bg-[#D1D5DB]" // gray-300
+              )}
+              role="switch"
+              aria-checked={editForm.allowDownload}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                  editForm.allowDownload ? "translate-x-5" : "translate-x-0"
+                )}
+              />
+            </button>
           </div>
+
+          {event && <FaceScanner eventId={event._id} />}
 
           {/* Status */}
           <div>
@@ -821,7 +836,7 @@ export default function AdminEventPage() {
           </div>
 
           {/* Allow Download toggle */}
-          <div className="flex items-center justify-between p-3 bg-[#FBF9F6] rounded-xl border border-[#EDE7DD]">
+          {/* <div className="flex items-center justify-between p-3 bg-[#FBF9F6] rounded-xl border border-[#EDE7DD]">
             <div>
               <p className="text-sm font-medium text-[#2B2B2B]">Allow Photo Downloads</p>
               <p className="text-xs text-[#6B6B6B] mt-0.5">Clients can download individual photos</p>
@@ -832,7 +847,7 @@ export default function AdminEventPage() {
             >
               <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editForm.allowDownload ? "translate-x-5" : "translate-x-1"}`} />
             </button>
-          </div>
+          </div> */}
 
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setSettingsOpen(false)}>Cancel</Button>

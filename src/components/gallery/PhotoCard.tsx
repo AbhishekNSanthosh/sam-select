@@ -26,6 +26,7 @@ export default function PhotoCard({
   onPreview,
 }: PhotoCardProps) {
   const [loaded, setLoaded] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   // Single click → open lightbox for viewing / selecting
   function handleClick() {
@@ -131,15 +132,41 @@ export default function PhotoCard({
 
         <div className="flex items-center gap-1">
           {allowDownload && (
-            <a
-              href={`/api/photos/${photo._id}/download`}
-              download
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white/90 text-[#2B2B2B] w-6 h-6 rounded-full flex items-center justify-center hover:bg-white shadow"
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (downloading) return;
+                setDownloading(true);
+                try {
+                  const res = await fetch(`/api/photos/${photo._id}/download`);
+                  if (!res.ok) throw new Error("Download failed");
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = photo.filename;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  window.open(`/api/photos/${photo._id}/download`, "_blank");
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              className={cn(
+                "bg-white/90 text-[#2B2B2B] w-6 h-6 rounded-full flex items-center justify-center hover:bg-white shadow",
+                downloading && "opacity-70 cursor-not-allowed"
+              )}
               title="Download"
             >
-              <Download size={11} />
-            </a>
+              {downloading ? (
+                <div className="w-2.5 h-2.5 rounded-full border border-[#D6C3A3] border-t-transparent animate-spin" />
+              ) : (
+                <Download size={11} />
+              )}
+            </button>
           )}
           {!isLocked && (
             <button

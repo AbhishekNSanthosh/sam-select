@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, LogOut, Heart, Search, X } from "lucide-react";
+import { ArrowLeft, LogOut, Heart, Search, X, ScanFace } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import Logo from "@/components/layout/Logo";
 import MasonryGrid from "@/components/gallery/MasonryGrid";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import SelfieSearch from "@/components/gallery/SelfieSearch";
+import BottomSheet from "@/components/ui/BottomSheet";
 import SelectionBar from "@/components/selection/SelectionBar";
 import SelectionDrawer from "@/components/selection/SelectionDrawer";
 import Modal from "@/components/ui/Modal";
@@ -32,6 +34,7 @@ export default function EventFolderPage() {
   const [loading, setLoading] = useState(true);
   const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selfieOpen, setSelfieOpen] = useState(false);
   const [authFailed, setAuthFailed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -319,24 +322,36 @@ export default function EventFolderPage() {
             </p>
           </div>
           
-          <div className="relative w-full md:w-64 shrink-0 shadow-sm border border-[#EDE7DD] rounded-full bg-white flex items-center px-4 overflow-hidden focus-within:border-[#D6C3A3] focus-within:ring-2 focus-within:ring-[#D6C3A3]/20 transition-all">
+          {/* Search bar + Selfie icon */}
+          <div className="relative w-full md:w-72 shrink-0 shadow-sm border border-[#EDE7DD] rounded-full bg-white flex items-center px-4 overflow-hidden focus-within:border-[#D6C3A3] focus-within:ring-2 focus-within:ring-[#D6C3A3]/20 transition-all">
             {isSearching ? (
               <Spinner className="w-4 h-4 text-[#B89B72]" />
             ) : (
-              <Search size={16} className="text-[#B89B72]" />
+              <Search size={16} className="text-[#B89B72] shrink-0" />
             )}
-            <input 
-              type="text" 
-              placeholder="Search by filename..." 
+            <input
+              type="text"
+              placeholder="Search by filename..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 w-full outline-none bg-transparent border-none focus:ring-0 text-sm py-2.5 px-3 mb-0 placeholder:text-[#6B6B6B]"
             />
             {searchQuery && !isSearching && (
-              <button onClick={() => setSearchQuery("")} className="text-[#6B6B6B] hover:text-[#2B2B2B]">
+              <button onClick={() => setSearchQuery("")} className="text-[#6B6B6B] hover:text-[#2B2B2B] mr-1">
                 <X size={14} />
               </button>
             )}
+            {/* Divider */}
+            <div className="w-px h-4 bg-[#EDE7DD] mx-1 shrink-0" />
+            {/* Selfie search button */}
+            <button
+              onClick={() => setSelfieOpen(true)}
+              title="Find My Photos"
+              className="flex items-center gap-1.5 text-[#6B6B6B] hover:text-[#B89B72] transition-colors shrink-0 py-1 pl-1"
+            >
+              <ScanFace size={16} />
+              <span className="hidden sm:inline text-xs font-medium pr-1">Selfie</span>
+            </button>
           </div>
         </div>
 
@@ -377,6 +392,18 @@ export default function EventFolderPage() {
         onSubmit={() => setConfirmOpen(true)}
       />
 
+      {/* Selfie Search sheet */}
+      <BottomSheet open={selfieOpen} onClose={() => setSelfieOpen(false)}>
+        <SelfieSearch
+          eventId={eventId}
+          isLocked={isLocked}
+          allowDownload={event?.allowDownload}
+          selectedIds={selected}
+          onSelectPhoto={(photo) => { setPreviewPhoto(photo); setSelfieOpen(false); }}
+          onTogglePhoto={handleToggle}
+          onClose={() => setSelfieOpen(false)}
+        />
+      </BottomSheet>
       <SelectionDrawer
         open={drawerOpen}
         selectedIds={selected}
