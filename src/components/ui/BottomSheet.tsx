@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 
 interface Props {
   open: boolean;
@@ -13,6 +14,9 @@ export default function BottomSheet({ open, onClose, children, maxWidth = "sm:ma
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Bind the hardware back button logic to sheet visibility
+  useBackButtonClose(open, onClose);
 
   useEffect(() => {
     if (open) {

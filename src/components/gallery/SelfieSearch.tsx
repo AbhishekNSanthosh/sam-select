@@ -166,6 +166,7 @@ export default function SelfieSearch({
 
     setResults([]);
     setErrorMsg("");
+    setPhase("analyzing"); // Instant feedback before heavy sync/async processing
 
     try {
       const imgElem = await fileToImg(file);

@@ -102,8 +102,8 @@ export default function EventFolderPage() {
   // 2. Load Photos based on debounced search (Cached)
   useEffect(() => {
     async function loadPhotos() {
-        // Stop if not auth'd or event not loaded
-        if (loading || authFailed) return;
+        // Stop if clearly unauthorized
+        if (authFailed) return;
 
         // Cache Hit
         if (searchCacheRef.current[debouncedSearch]) {
@@ -139,7 +139,7 @@ export default function EventFolderPage() {
     }
     
     loadPhotos();
-  }, [eventId, category, debouncedSearch, loading, authFailed]);
+  }, [eventId, category, debouncedSearch, authFailed]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
