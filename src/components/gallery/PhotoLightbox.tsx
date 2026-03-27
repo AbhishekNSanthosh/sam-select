@@ -4,6 +4,8 @@ import { useEffect, useCallback, useState } from "react";
 import Image from "next/image";
 import { X, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 import type { IPhoto } from "@/types";
 
 interface PhotoLightboxProps {
@@ -32,6 +34,8 @@ export default function PhotoLightbox({
   const currentIndex = photos.findIndex((p) => p._id === photo._id);
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < photos.length - 1;
+
+  useBackButtonClose(true, onClose);
 
   // Track whether the full-res image has loaded
   const [fullLoaded, setFullLoaded] = useState(false);
@@ -150,38 +154,51 @@ export default function PhotoLightbox({
         )}
 
         {/* Image wrapper — stacks thumbnail + full-res */}
-        <div className="relative flex items-center justify-center w-full h-full px-14 sm:px-16 py-4">
+        <div className="relative flex items-center justify-center w-full h-full px-14 sm:px-16 py-4 overflow-hidden touch-none">
+          <TransformWrapper
+            initialScale={1}
+            minScale={1}
+            maxScale={4}
+            wheel={{ step: 0.1 }}
+            doubleClick={{ step: 1 }}
+            centerOnInit
+          >
+            <TransformComponent wrapperClass="!w-full !h-full flex items-center justify-center" contentClass="!w-auto !h-auto">
+              <div className="relative flex items-center justify-center w-full h-full">
+                {/* Blurred thumbnail placeholder — shows instantly, fades out when full-res ready */}
+                <Image
+                  src={photo.thumbnailUrl}
+                  alt=""
+                  aria-hidden
+                  width={photo.width ?? 400}
+                  height={photo.height ?? 300}
+                  className={cn(
+                    "absolute max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg pointer-events-none",
+                    "blur-sm scale-105 transition-opacity duration-300",
+                    fullLoaded ? "opacity-0" : "opacity-100"
+                  )}
+                  priority
+                  unoptimized // avoid double optimizing thumbnail
+                />
 
-          {/* Blurred thumbnail placeholder — shows instantly, fades out when full-res ready */}
-          <Image
-            src={photo.thumbnailUrl}
-            alt=""
-            aria-hidden
-            width={photo.width ?? 400}
-            height={photo.height ?? 300}
-            className={cn(
-              "absolute max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg",
-              "blur-sm scale-105 transition-opacity duration-300",
-              fullLoaded ? "opacity-0" : "opacity-100"
-            )}
-            priority
-          />
-
-          {/* Full-resolution image */}
-          <Image
-            key={photo._id}
-            src={photo.thumbnailUrl.replace(/=s\d+$/, "=s1600")}
-            alt={photo.filename}
-            width={photo.width ?? 1200}
-            height={photo.height ?? 800}
-            className={cn(
-              "max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg shadow-md transition-opacity duration-300",
-              fullLoaded ? "opacity-100" : "opacity-0"
-            )}
-            onLoad={() => setFullLoaded(true)}
-            priority
-          />
-
+                {/* Full-resolution image */}
+                <Image
+                  key={photo._id}
+                  src={photo.thumbnailUrl.replace(/=s\d+$/, "=s1600")}
+                  alt={photo.filename}
+                  width={photo.width ?? 1200}
+                  height={photo.height ?? 800}
+                  className={cn(
+                    "max-h-[calc(100vh-180px)] w-auto max-w-full object-contain rounded-lg shadow-md transition-opacity duration-300 select-none",
+                    fullLoaded ? "opacity-100" : "opacity-0"
+                  )}
+                  onLoad={() => setFullLoaded(true)}
+                  unoptimized
+                  draggable={false}
+                />
+              </div>
+            </TransformComponent>
+          </TransformWrapper>
           {/* Selected badge */}
           {isSelected && (
             <div className="absolute top-4 right-16 sm:right-4 flex items-center gap-1.5 bg-[#D6C3A3] text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-scale-in">

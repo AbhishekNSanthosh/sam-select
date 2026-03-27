@@ -23,10 +23,12 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "40", 10)));
   const category = searchParams.get("category") ?? null;
+  const search = searchParams.get("search") ?? "";
 
   await connectDB();
   const filter: Record<string, unknown> = { eventId };
   if (category) filter.category = category;
+  if (search) filter.filename = { $regex: search, $options: "i" };
 
   const [photos, total] = await Promise.all([
     Photo.find(filter)

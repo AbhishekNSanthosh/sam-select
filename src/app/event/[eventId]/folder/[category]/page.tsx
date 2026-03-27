@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, LogOut, Heart } from "lucide-react";
+import { ArrowLeft, LogOut, Heart, Search, X } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import Logo from "@/components/layout/Logo";
 import MasonryGrid from "@/components/gallery/MasonryGrid";
 import PhotoLightbox from "@/components/gallery/PhotoLightbox";
@@ -40,14 +41,29 @@ export default function EventFolderPage() {
 
   const { selected, count, toggle, remove, isSelected, setSelected } = useSelection();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Search Results Cache
+  const searchCacheRef = useRef<Record<string, { photos: IPhoto[], total: number, hasMore: boolean }>>({});
+
   const isLocked = album?.status === "approved" || event?.status === "locked";
 
+  // Debounce search query
   useEffect(() => {
-    async function load() {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 1. Load Event & Selections (Once)
+  useEffect(() => {
+    async function init() {
       try {
-        const [evRes, phRes, selRes] = await Promise.all([
+        const [evRes, selRes] = await Promise.all([
           fetch(`/api/events/${eventId}`),
-          fetch(`/api/photos?eventId=${eventId}&category=${encodeURIComponent(category)}&page=1&limit=40`),
           fetch("/api/selections"),
         ]);
 
@@ -57,19 +73,10 @@ export default function EventFolderPage() {
           return;
         }
 
-        const [evData, phData, selData] = await Promise.all([
-          evRes.json(), phRes.json(), selRes.json(),
-        ]);
+        const [evData, selData] = await Promise.all([evRes.json(), selRes.json()]);
 
         if (!evData.success) throw new Error();
         setEvent(evData.data);
-
-        if (phData.success) {
-          setPhotos(phData.data.photos);
-          setTotalPhotos(phData.data.total);
-          setPhotosPage(1);
-          setHasMore(phData.data.hasMore);
-        }
 
         if (selData.success) {
           const al: IAlbum = selData.data;
@@ -85,8 +92,50 @@ export default function EventFolderPage() {
         setLoading(false);
       }
     }
-    load();
-  }, [eventId, category, router, setSelected]);
+    init();
+  }, [eventId, router, setSelected]);
+
+  // 2. Load Photos based on debounced search (Cached)
+  useEffect(() => {
+    async function loadPhotos() {
+        // Stop if not auth'd or event not loaded
+        if (loading || authFailed) return;
+
+        // Cache Hit
+        if (searchCacheRef.current[debouncedSearch]) {
+          const cached = searchCacheRef.current[debouncedSearch];
+          setPhotos(cached.photos);
+          setTotalPhotos(cached.total);
+          setPhotosPage(1);
+          setHasMore(cached.hasMore);
+          return;
+        }
+
+        setIsSearching(true);
+        try {
+          const phRes = await fetch(`/api/photos?eventId=${eventId}&category=${encodeURIComponent(category)}&page=1&limit=40&search=${encodeURIComponent(debouncedSearch)}`);
+          const phData = await phRes.json();
+
+          if (phData.success) {
+            setPhotos(phData.data.photos);
+            setTotalPhotos(phData.data.total);
+            setPhotosPage(1);
+            setHasMore(phData.data.hasMore);
+            
+            // Save to cache
+            searchCacheRef.current[debouncedSearch] = {
+               photos: phData.data.photos,
+               total: phData.data.total,
+               hasMore: phData.data.hasMore
+            };
+          }
+        } finally {
+          setIsSearching(false);
+        }
+    }
+    
+    loadPhotos();
+  }, [eventId, category, debouncedSearch, loading, authFailed]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -99,7 +148,7 @@ export default function EventFolderPage() {
         try {
           const nextPage = photosPage + 1;
           const res = await fetch(
-            `/api/photos?eventId=${eventId}&category=${encodeURIComponent(category)}&page=${nextPage}&limit=40`
+            `/api/photos?eventId=${eventId}&category=${encodeURIComponent(category)}&page=${nextPage}&limit=40&search=${encodeURIComponent(debouncedSearch)}`
           );
           const data = await res.json();
           if (data.success) {
@@ -116,7 +165,7 @@ export default function EventFolderPage() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, photosPage, eventId, category]);
+  }, [hasMore, photosPage, eventId, category, debouncedSearch]);
 
   const saveSelection = useCallback(
     (ids: string[]) => {
@@ -258,15 +307,37 @@ export default function EventFolderPage() {
           <ArrowLeft size={15} /> All Folders
         </button>
 
-        {/* Hero */}
-        <div className="mb-6 animate-fade-in">
-          <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
-            {event?.clientName}&apos;s Gallery
-          </p>
-          <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">{category}</h1>
-          <p className="text-[#6B6B6B] text-sm">
-            {totalPhotos} photos · {isLocked ? "Album submitted" : "Tap to select your favourites"}
-          </p>
+        {/* Hero & Search */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in relative z-10">
+          <div>
+            <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
+              {event?.clientName}&apos;s Gallery
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">{category}</h1>
+            <p className="text-[#6B6B6B] text-sm">
+              {totalPhotos} photos · {isLocked ? "Album submitted" : "Tap to select your favourites"}
+            </p>
+          </div>
+          
+          <div className="relative w-full md:w-64 shrink-0 shadow-sm border border-[#EDE7DD] rounded-full bg-white flex items-center px-4 overflow-hidden focus-within:border-[#D6C3A3] focus-within:ring-2 focus-within:ring-[#D6C3A3]/20 transition-all">
+            {isSearching ? (
+              <Spinner className="w-4 h-4 text-[#B89B72]" />
+            ) : (
+              <Search size={16} className="text-[#B89B72]" />
+            )}
+            <input 
+              type="text" 
+              placeholder="Search by filename..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 w-full outline-none bg-transparent border-none focus:ring-0 text-sm py-2.5 px-3 mb-0 placeholder:text-[#6B6B6B]"
+            />
+            {searchQuery && !isSearching && (
+              <button onClick={() => setSearchQuery("")} className="text-[#6B6B6B] hover:text-[#2B2B2B]">
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
 
         {isLocked && (
@@ -279,14 +350,16 @@ export default function EventFolderPage() {
           </div>
         )}
 
-        <MasonryGrid
-          photos={photos}
-          selected={selected}
-          isLocked={isLocked}
-          allowDownload={event?.allowDownload}
-          onToggle={handleToggle}
-          onPreview={setPreviewPhoto}
-        />
+        <div className={cn("transition-opacity duration-300", isSearching ? "opacity-50 pointer-events-none" : "opacity-100")}>
+          <MasonryGrid
+            photos={photos}
+            selected={selected}
+            isLocked={isLocked}
+            allowDownload={event?.allowDownload}
+            onToggle={handleToggle}
+            onPreview={setPreviewPhoto}
+          />
+        </div>
 
         <div ref={sentinelRef} className="flex justify-center py-8">
           {loadingMore && <Spinner className="w-6 h-6" />}

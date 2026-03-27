@@ -777,6 +777,20 @@ export default function AdminEventPage() {
           </div>
           <Input label="Description" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
 
+          {/* Download toggle */}
+          <div className="flex items-center gap-3 bg-[#FBF9F6] rounded-xl px-4 py-3 border border-[#EDE7DD]">
+            <input
+              id="allowDownload"
+              type="checkbox"
+              checked={editForm.allowDownload}
+              onChange={(e) => setEditForm({ ...editForm, allowDownload: e.target.checked })}
+              className="w-4 h-4 accent-[#D6C3A3]"
+            />
+            <label htmlFor="allowDownload" className="text-sm text-[#2B2B2B] cursor-pointer select-none">
+              Allow clients to download photos
+            </label>
+          </div>
+
           {/* Status */}
           <div>
             <label className="block text-xs font-medium text-[#6B6B6B] uppercase tracking-[0.12em] mb-2">

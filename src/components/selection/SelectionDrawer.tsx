@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 import type { IPhoto } from "@/types";
 
 interface SelectionDrawerProps {
@@ -26,6 +27,8 @@ export default function SelectionDrawer({
   const [selectedPhotos, setSelectedPhotos] = useState<IPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const prevIdsRef = useRef<string>("");
+
+  useBackButtonClose(open, onClose);
 
   // Fetch full photo objects whenever the drawer opens or selection changes
   useEffect(() => {

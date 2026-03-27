@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
 import { X } from "lucide-react";
+import { useBackButtonClose } from "@/hooks/useBackButtonClose";
 
 interface ModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export default function Modal({
   size = "md",
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  useBackButtonClose(open, onClose);
 
   useEffect(() => {
     if (open) {

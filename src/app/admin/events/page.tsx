@@ -132,7 +132,7 @@ export default function AdminEventsPage() {
               placeholder="Search by name, client or PIN…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-[#EDE7DD] bg-white text-[#2B2B2B] placeholder-[#6B6B6B]/60 focus:outline-none focus:border-[#D6C3A3] focus:ring-2 focus:ring-[#D6C3A3]/20"
+              className="w-full outline-none pl-9 pr-4 py-2.5 text-sm rounded-xl border border-[#EDE7DD] bg-white text-[#2B2B2B] placeholder-[#6B6B6B]/60 focus:outline-none focus:border-[#D6C3A3] focus:ring-2 focus:ring-[#D6C3A3]/20"
             />
           </div>
           <div className="flex gap-1.5 bg-white border border-[#EDE7DD] rounded-xl p-1">
