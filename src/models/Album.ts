@@ -37,7 +37,6 @@ const AlbumSchema = new Schema<IAlbumDocument>(
   { timestamps: true }
 );
 
-AlbumSchema.index({ eventId: 1 });
 AlbumSchema.index({ status: 1 });
 
 const Album: Model<IAlbumDocument> =

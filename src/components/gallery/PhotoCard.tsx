@@ -183,13 +183,6 @@ export default function PhotoCard({
           )}
         </div>
       </div>
-
-      {/* Mobile: always-visible select dot when selected */}
-      {isSelected && (
-        <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#D6C3A3] border-2 border-[#D6C3A3] flex items-center justify-center shadow-md sm:hidden">
-          <Check size={14} className="text-white stroke-[3]" />
-        </div>
-      )}
     </div>
   );
 }

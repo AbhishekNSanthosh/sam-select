@@ -41,7 +41,51 @@ export async function PATCH(
   const { eventId } = await params;
   await connectDB();
 
-  const body = await req.json().catch(() => ({}));
+  const contentType = req.headers.get("content-type") || "";
+  let body: Record<string, any> = {};
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await req.formData();
+    body = Object.fromEntries(formData.entries());
+    
+    // Check if there's a new cover photo uploaded
+    const coverFile = formData.get("cover") as File | null;
+    const coverFolderId = formData.get("coverFolderId") as string | null;
+    console.log("PATCH API: coverFile is", coverFile ? `File(size: ${coverFile.size})` : null, "coverFolderId:", coverFolderId);
+    
+    if (coverFile && coverFile.size > 0) {
+      const { uploadFileToDrive, listEventFolders, createDriveFolder } = await import("@/lib/drive/service");
+      
+      let resolvedFolderId = coverFolderId || undefined;
+      // Completely automate folder routing if none explicitly provided
+      if (!resolvedFolderId && process.env.GOOGLE_DRIVE_FOLDER_ID) {
+        const clientName = (formData.get("clientName") as string) || "Unknown Client";
+        try {
+          const rootFolder = process.env.GOOGLE_DRIVE_FOLDER_ID;
+          const existingFolders = await listEventFolders(rootFolder);
+          const match = existingFolders.find(f => f.name.trim().toLowerCase() === clientName.trim().toLowerCase());
+          if (match) {
+            resolvedFolderId = match.id;
+          } else {
+            resolvedFolderId = await createDriveFolder(clientName, rootFolder);
+          }
+        } catch (e) {
+          console.error("Failed to auto-provision drive folder, falling back...", e);
+        }
+      }
+
+      const buffer = Buffer.from(await coverFile.arrayBuffer());
+      const { thumbnailUrl } = await uploadFileToDrive(
+        buffer,
+        coverFile.name,
+        coverFile.type,
+        resolvedFolderId
+      );
+      body.coverPhoto = thumbnailUrl;
+    }
+  } else {
+    body = await req.json().catch(() => ({}));
+  }
 
   if (body.action === "regenerate_token") {
     const event = await Event.findByIdAndUpdate(
@@ -53,12 +97,12 @@ export async function PATCH(
     return ok({ shareToken: event.shareToken });
   }
 
-  const ALLOWED = ["name", "clientName", "eventDate", "pin", "description", "status", "minSelection", "maxSelection", "allowDownload"] as const;
+  const ALLOWED = ["name", "clientName", "eventDate", "pin", "description", "status", "minSelection", "maxSelection", "allowDownload", "coverPhoto"] as const;
   const VALID_STATUSES = ["active", "locked", "archived"];
 
   const update: Record<string, unknown> = {};
   for (const key of ALLOWED) {
-    if (key in body && body[key] !== undefined) {
+    if (key in body && body[key] !== undefined && body[key] !== "") {
       update[key] = body[key];
     }
   }

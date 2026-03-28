@@ -60,3 +60,27 @@ export async function DELETE(
 
   return ok({ deleted: result.deletedCount });
 }
+
+// PATCH /api/admin/events/[eventId]/categories
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ eventId: string }> }
+) {
+  const session = await getSession();
+  if (!session || session.eventId !== "admin") return err("Unauthorized", 401);
+
+  const { oldName, newName } = await req.json();
+  if (!oldName || !newName || newName.trim() === "") {
+    return err("oldName and valid newName are required", 400);
+  }
+
+  const { eventId } = await params;
+  await connectDB();
+
+  const result = await Photo.updateMany(
+    { eventId: new mongoose.Types.ObjectId(eventId), category: oldName },
+    { $set: { category: newName.trim() } }
+  );
+
+  return ok({ updated: result.modifiedCount });
+}

@@ -29,6 +29,7 @@ export default function AdminFolderPage() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<IPhoto | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -126,39 +127,40 @@ export default function AdminFolderPage() {
             <Spinner />
           </div>
         ) : photos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl card-shadow">
-            <ImageIcon size={28} className="text-[#D6C3A3] mb-3" />
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-xl border border-[#EDE7DD]">
+            <div className="w-12 h-12 rounded-xl bg-[#F5EFE6] flex items-center justify-center mb-3">
+              <ImageIcon size={22} className="text-[#B89B72]" />
+            </div>
             <p className="font-display text-base text-[#2B2B2B]">No photos in this folder</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl card-shadow overflow-hidden">
-            <div className="p-4">
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-                {photos.map((photo) => (
-                  <div
-                    key={photo._id}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-[#EDE7DD]"
-                  >
-                    <Image
-                      src={photo.thumbnailUrl}
-                      alt={photo.filename}
-                      fill
-                      className="object-cover"
-                      sizes="100px"
-                      unoptimized
+          <div className="bg-white rounded-xl border border-[#EDE7DD] overflow-hidden p-4">
+            <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-3 space-y-3">
+              {photos.map((photo) => (
+                <div
+                  key={photo._id}
+                  className="relative break-inside-avoid rounded-xl overflow-hidden bg-[#EDE7DD] cursor-pointer group"
+                  onClick={() => setSelectedPhoto(photo)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.thumbnailUrl.replace(/=s\d+$/, "=w600")}
+                    alt={photo.filename}
+                    loading="lazy"
+                    className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  />
+                  {photo.isBlurry && (
+                    <div
+                      className="absolute top-2 right-2 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white shadow-sm"
+                      title="Blurry"
                     />
-                    {photo.isBlurry && (
-                      <div
-                        className="absolute top-1 right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white"
-                        title="Blurry"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div ref={sentinelRef} className={hasMore ? "flex justify-center py-6" : "h-px"}>
-                {loadingMore && <Spinner className="w-5 h-5" />}
-              </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                </div>
+              ))}
+            </div>
+            <div ref={sentinelRef} className={hasMore ? "flex justify-center py-8" : "h-px"}>
+              {loadingMore && <Spinner className="w-6 h-6 text-[#D6C3A3]" />}
             </div>
           </div>
         )}
@@ -191,6 +193,29 @@ export default function AdminFolderPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Lightbox */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 md:p-8 backdrop-blur-sm transition-opacity"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={selectedPhoto.fullUrl || selectedPhoto.thumbnailUrl.replace(/=s\d+(-\w+)?$/, "=s2048")}
+            alt={selectedPhoto.filename}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-scale-in"
+          />
+          <button
+            className="absolute top-4 right-4 md:top-6 md:right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            onClick={(e) => { e.stopPropagation(); setSelectedPhoto(null); }}
+          >
+            <svg fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

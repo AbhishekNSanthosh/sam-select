@@ -12,15 +12,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "gold", size = "md", loading, disabled, children, ...props }, ref) => {
     const base =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D6C3A3] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+      "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D6C3A3] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
 
     const variants = {
-      gold: "bg-[#D6C3A3] text-white hover:bg-[#C5AF8E] shadow-sm hover:shadow-md",
+      gold: "bg-[#D6C3A3] text-white hover:bg-[#C5AF8E]",
       outline:
         "border border-[#D6C3A3] text-[#D6C3A3] hover:bg-[#D6C3A3]/10 bg-transparent",
       ghost: "text-[#6B6B6B] hover:bg-[#EDE7DD] hover:text-[#2B2B2B] bg-transparent",
-      danger: "bg-red-500 text-white hover:bg-red-600 shadow-sm",
-      blush: "bg-[#B89B72] text-[#2B2B2B] hover:bg-[#A08A62] shadow-sm",
+      danger: "bg-red-500 text-white hover:bg-red-600",
+      blush: "bg-[#B89B72] text-[#2B2B2B] hover:bg-[#A08A62]",
     };
 
     const sizes = {

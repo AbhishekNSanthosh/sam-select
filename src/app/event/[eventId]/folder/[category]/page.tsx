@@ -40,6 +40,7 @@ export default function EventFolderPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageRef = useRef(1);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingMoreRef = useRef(false);
 
@@ -111,6 +112,7 @@ export default function EventFolderPage() {
           setPhotos(cached.photos);
           setTotalPhotos(cached.total);
           setPhotosPage(1);
+          pageRef.current = 1;
           setHasMore(cached.hasMore);
           return;
         }
@@ -124,6 +126,7 @@ export default function EventFolderPage() {
             setPhotos(phData.data.photos);
             setTotalPhotos(phData.data.total);
             setPhotosPage(1);
+            pageRef.current = 1;
             setHasMore(phData.data.hasMore);
             
             // Save to cache
@@ -150,26 +153,35 @@ export default function EventFolderPage() {
         loadingMoreRef.current = true;
         setLoadingMore(true);
         try {
-          const nextPage = photosPage + 1;
+          const nextPage = pageRef.current + 1;
           const res = await fetch(
             `/api/photos?eventId=${eventId}&category=${encodeURIComponent(category)}&page=${nextPage}&limit=40&search=${encodeURIComponent(debouncedSearch)}`
           );
           const data = await res.json();
           if (data.success) {
-            setPhotos((prev) => [...prev, ...data.data.photos]);
+            pageRef.current = nextPage;
+            setPhotos((prev) => {
+              const existingIds = new Set(prev.map(p => p._id));
+              const newPhotos = data.data.photos.filter((p: IPhoto) => !existingIds.has(p._id));
+              return [...prev, ...newPhotos];
+            });
             setPhotosPage(nextPage);
             setHasMore(data.data.hasMore);
           }
         } finally {
           setLoadingMore(false);
-          loadingMoreRef.current = false;
+          // Wait for Masonry layout to physically render and push the sentinel off-screen
+          setTimeout(() => {
+            loadingMoreRef.current = false;
+          }, 400);
         }
       },
-      { rootMargin: "300px" }
+      { rootMargin: "600px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, photosPage, eventId, category, debouncedSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, eventId, category, debouncedSearch]);
 
   const saveSelection = useCallback(
     (ids: string[]) => {

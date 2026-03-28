@@ -29,7 +29,15 @@ export default async function InvitePage({
     redirect(`/event/${event._id}`);
   }
 
-  const bgImage = event.coverPhoto?.replace(/=s\d+$/, "=s1600") || "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2669&auto=format&fit=crop";
+  let bgImage = "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2669&auto=format&fit=crop";
+  if (event.coverPhoto) {
+    const driveMatch = event.coverPhoto.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      bgImage = `https://lh3.googleusercontent.com/d/${driveMatch[1]}=s1600`;
+    } else {
+      bgImage = event.coverPhoto;
+    }
+  }
 
   const formattedDate = event.eventDate
     ? new Date(event.eventDate).toLocaleDateString("en-IN", {
@@ -42,7 +50,7 @@ export default async function InvitePage({
   return (
     <main className="h-[100dvh] overflow-hidden bg-[#FBF9F6] flex flex-col md:flex-row">
       {/* Background / Left Image Panel */}
-      <div className="relative w-full h-[35vh] sm:h-[40vh] md:h-full md:w-5/12 lg:w-1/2 flex-shrink-0">
+      <div className="relative w-full h-[46vh] sm:h-[50vh] md:h-full md:w-5/12 lg:w-1/2 flex-shrink-0">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url('${bgImage}')` }}
@@ -67,12 +75,12 @@ export default async function InvitePage({
       {/* Right Form Panel */}
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 -mt-6 md:mt-0 relative z-10 bg-[#FBF9F6] rounded-t-3xl md:rounded-none overflow-y-auto">
         <div className="w-full max-w-sm md:max-w-md mx-auto relative">
-          <div className="hidden md:block text-center mb-6">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-2 font-medium">Welcome to</p>
-            <h1 className="font-display text-4xl text-[#2B2B2B] mb-2">{event.clientName}</h1>
-            <p className="text-sm text-[#6B6B6B]">{event.name}</p>
-            {formattedDate && <p className="text-xs text-[#B0A090] mt-1">{formattedDate}</p>}
-            {event.description && <p className="text-xs text-[#B0A090] mt-1 italic mx-auto max-w-[80%] line-clamp-2">{event.description}</p>}
+          <div className="text-center mb-6 flex flex-col items-center">
+            <p className="hidden md:block text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-2 font-medium">Welcome to</p>
+            <h1 className="hidden md:block font-display text-4xl text-[#2B2B2B] mb-2">{event.clientName}</h1>
+            <p className="hidden md:block text-sm text-[#6B6B6B]">{event.name}</p>
+            {formattedDate && <p className="hidden md:block text-xs text-[#B0A090] mt-1">{formattedDate}</p>}
+            {event.description && <p className="hidden md:block text-xs text-[#B0A090] mt-1 italic mx-auto max-w-[80%] line-clamp-2">{event.description}</p>}
           </div>
 
           <InviteForm

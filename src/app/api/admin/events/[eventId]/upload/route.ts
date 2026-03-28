@@ -26,7 +26,7 @@ export async function POST(
   const formData = await req.formData();
   const category = (formData.get("category") as string) || "General";
   const removeBlurry = formData.get("removeBlurry") === "true";
-  const driveFolderId = (formData.get("driveFolderId") as string) || undefined;
+  let resolvedFolderId = (formData.get("driveFolderId") as string) || undefined;
   const files = formData.getAll("files") as File[];
 
   if (!files.length) return err("No files provided", 400);
@@ -35,6 +35,23 @@ export async function POST(
 
   const event = await Event.findById(eventId);
   if (!event) return err("Event not found", 404);
+
+  // Automatically intercept missing Drive locations and route pictures to the client's dedicated container!
+  if (!resolvedFolderId && process.env.GOOGLE_DRIVE_FOLDER_ID) {
+    try {
+      const rootFolder = process.env.GOOGLE_DRIVE_FOLDER_ID;
+      const { listEventFolders, createDriveFolder } = await import("@/lib/drive/service");
+      const existingFolders = await listEventFolders(rootFolder);
+      const match = existingFolders.find(f => f.name.trim().toLowerCase() === event.clientName.trim().toLowerCase());
+      if (match) {
+        resolvedFolderId = match.id;
+      } else {
+        resolvedFolderId = await createDriveFolder(event.clientName, rootFolder);
+      }
+    } catch (e) {
+      console.error("Failed to auto-route bulk upload to client folder...", e);
+    }
+  }
 
   const existingCount = await Photo.countDocuments({ eventId });
 
@@ -56,7 +73,7 @@ export async function POST(
       buffer,
       file.name,
       file.type,
-      driveFolderId
+      resolvedFolderId
     );
 
     const meta = await sharp(buffer).metadata();

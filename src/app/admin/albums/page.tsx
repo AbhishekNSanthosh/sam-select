@@ -10,6 +10,8 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
+import PhotoLightbox from "@/components/gallery/PhotoLightbox";
+import type { IPhoto } from "@/types";
 
 interface PopulatedAlbum {
   _id: string;
@@ -20,6 +22,7 @@ interface PopulatedAlbum {
     _id: string;
     thumbnailUrl: string;
     filename: string;
+    fullUrl?: string;
   }>;
   eventId: {
     _id: string;
@@ -35,6 +38,10 @@ export default function AdminAlbumsPage() {
   const [albums, setAlbums] = useState<PopulatedAlbum[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Lightbox preview properties
+  const [previewPhoto, setPreviewPhoto] = useState<IPhoto | null>(null);
+  const [previewGallery, setPreviewGallery] = useState<IPhoto[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/albums")
@@ -90,14 +97,14 @@ export default function AdminAlbumsPage() {
             <Spinner className="w-8 h-8" />
           </div>
         ) : albums.length === 0 ? (
-          <div className="bg-white rounded-2xl card-shadow p-12 text-center">
+          <div className="bg-white rounded-xl border border-[#EDE7DD] p-12 text-center">
             <p className="font-display text-lg text-[#2B2B2B] mb-1">No albums submitted yet</p>
-            <p className="text-sm text-[#6B6B6B]">Albums will appear here once clients submit their selections.</p>
+            <p className="text-sm text-[#A09080]">Albums will appear here once clients submit their selections.</p>
           </div>
         ) : (
           <div className="space-y-6">
             {albums.map((album) => (
-              <div key={album._id} className="bg-white rounded-2xl card-shadow overflow-hidden">
+              <div key={album._id} className="bg-white rounded-xl border border-[#EDE7DD] overflow-hidden">
                 {/* Album header */}
                 <div className="px-6 py-5 border-b border-[#EDE7DD] flex items-start justify-between gap-4 flex-wrap">
                   <div>
@@ -139,19 +146,27 @@ export default function AdminAlbumsPage() {
                 <div className="p-4">
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {album.selectedPhotoIds?.slice(0, 20).map((photo) => (
-                      <div
+                      <button
                         key={photo._id}
-                        className="w-20 h-20 rounded-lg overflow-hidden bg-[#EDE7DD] shrink-0"
+                        onClick={() => {
+                          setPreviewGallery(album.selectedPhotoIds as unknown as IPhoto[]);
+                          setPreviewPhoto(photo as unknown as IPhoto);
+                        }}
+                        className="w-20 h-20 rounded-lg overflow-hidden bg-[#EDE7DD] shrink-0 hover:ring-2 hover:ring-[#D6C3A3] transition-all"
                       >
-                        <Image
-                          src={photo.thumbnailUrl}
+                        <img
+                          src={`/api/photos/proxy?url=${encodeURIComponent(photo.thumbnailUrl)}`}
                           alt={photo.filename ?? ""}
-                          width={80}
-                          height={80}
-                          className="w-full h-full object-cover"
-                          unoptimized
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallback) {
+                              target.dataset.fallback = "1";
+                              target.src = photo.thumbnailUrl;
+                            }
+                          }}
                         />
-                      </div>
+                      </button>
                     ))}
                     {album.selectedPhotoIds?.length > 20 && (
                       <div className="w-20 h-20 rounded-lg bg-[#EDE7DD] shrink-0 flex items-center justify-center">
@@ -209,6 +224,23 @@ export default function AdminAlbumsPage() {
           </div>
         )}
       </div>
+
+      {previewPhoto && (
+        <PhotoLightbox
+          photo={previewPhoto}
+          photos={previewGallery}
+          totalPhotos={previewGallery.length}
+          isSelected={true}
+          isLocked={true}
+          allowDownload={true}
+          onClose={() => {
+            setPreviewPhoto(null);
+            setPreviewGallery([]);
+          }}
+          onToggle={() => {}}
+          onNavigate={setPreviewPhoto}
+        />
+      )}
     </div>
   );
 }

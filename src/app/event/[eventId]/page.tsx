@@ -209,17 +209,29 @@ export default function EventGalleryPage() {
 
       <div className="px-[5vw] pt-8 pb-4">
         {/* Hero */}
-        <div className="mb-8 animate-fade-in">
-          <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
-            {event?.clientName}&apos;s Gallery
-          </p>
-          <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">{event?.name}</h1>
-          <p className="text-[#6B6B6B] text-sm">
-            {categories.reduce((s, c) => s + c.count, 0)} photos ·{" "}
-            {isLocked ? "Album submitted" : "Choose a folder to start selecting"}
-            {event?.minSelection && !isLocked && ` · Minimum ${event.minSelection} photos`}
-            {event?.maxSelection && !isLocked && `, maximum ${event.maxSelection}`}
-          </p>
+        <div className="mb-8 animate-fade-in flex items-center justify-between gap-6">
+          <div>
+            <p className="text-xs tracking-[0.2em] uppercase text-[#D6C3A3] mb-1">
+              {event?.clientName}&apos;s Gallery
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl text-[#2B2B2B] mb-2">{event?.name}</h1>
+            <p className="text-[#6B6B6B] text-sm">
+              {categories.reduce((s, c) => s + c.count, 0)} photos ·{" "}
+              {isLocked ? "Album submitted" : "Choose a folder to start selecting"}
+              {event?.minSelection && !isLocked && ` · Minimum ${event.minSelection} photos`}
+              {event?.maxSelection && !isLocked && `, maximum ${event.maxSelection}`}
+            </p>
+          </div>
+          {event?.coverPhoto && (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] overflow-hidden shrink-0 bg-[#EDE7DD]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={event.coverPhoto.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/) ? `https://lh3.googleusercontent.com/d/${event.coverPhoto.match(/(?:\/d\/|id=)([a-zA-Z0-9_-]+)/)![1]}=s300` : event.coverPhoto}
+                alt={event.name} 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+          )}
         </div>
 
         {/* Folder grid */}

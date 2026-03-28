@@ -33,7 +33,7 @@ export async function POST(
   if (!session || session.eventId !== "admin") return err("Unauthorized", 401);
 
   const { eventId } = await params;
-  const { folderId } = await req.json();
+  const { folderId, categoryName } = await req.json();
 
   if (!folderId) return err("folderId is required", 400);
 
@@ -62,12 +62,15 @@ export async function POST(
   // Errors are non-fatal (e.g. service account lacks permission on externally-owned files).
   await Promise.allSettled(newFiles.map((f) => grantPublicAccess(f.id)));
 
+  const finalCategory = categoryName && categoryName.trim().length > 0 ? categoryName.trim() : "General";
+
   const docs = newFiles.map((f, i) => ({
     eventId,
     driveFileId: f.id,
     thumbnailUrl: f.thumbnailUrl,
     fullUrl: f.fullUrl,
     filename: f.name,
+    category: finalCategory,
     width: f.width,
     height: f.height,
     aspectRatio: f.width && f.height ? f.width / f.height : undefined,

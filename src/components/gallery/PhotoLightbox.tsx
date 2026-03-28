@@ -223,13 +223,7 @@ export default function PhotoLightbox({
           </TransformWrapper>
         </div>
 
-        {/* Selected badge */}
-        {isSelected && (
-          <div className="absolute top-4 right-16 sm:right-4 flex items-center gap-1.5 bg-[#D6C3A3] text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-scale-in">
-            <Check size={12} className="stroke-[3]" />
-            Selected
-          </div>
-        )}
+
 
         {/* Next arrow */}
         {hasNext && (

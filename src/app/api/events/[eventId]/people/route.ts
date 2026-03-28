@@ -41,7 +41,6 @@ export async function GET(
       faceDescriptors: { $exists: true, $not: { $size: 0 } },
     }).lean();
 
-    // Grouping
     const clusters: {
       id: string;
       representativePhoto: any;
@@ -49,7 +48,9 @@ export async function GET(
       descriptors: number[][];
     }[] = [];
 
-    const THRESHOLD = 0.40; // Extremely strict for "precise exact faces"
+    // 0.55 is an optimal threshold for SSD MobileNetv1 facial recognition where 
+    // < 0.4 is perfectly identical, < 0.55 is very likely identical but varying angles/lighting
+    const THRESHOLD = 0.55; 
 
     for (const photo of photos as any[]) {
       if (!photo.faceDescriptors?.length) continue;
@@ -58,22 +59,21 @@ export async function GET(
         let matchedCluster: typeof clusters[0] | null = null;
         let minOverallDistance = Infinity;
 
-        // Find the best matching cluster
+        // Find the best matching cluster based on the closest similarity to any face in that group
         for (const cluster of clusters) {
-          // Compare ONLY against the "anchor" face (first descriptor) to avoid 
-          // "chaining" where completely differently looking people get accidentally chained into the same group.
-          const anchorDescriptor = cluster.descriptors[0];
-          const d = euclideanDistance(descriptor, anchorDescriptor);
-          
-          if (d < minOverallDistance) {
-            minOverallDistance = d;
-            matchedCluster = cluster;
+          for (const sd of cluster.descriptors) {
+            const d = euclideanDistance(descriptor, sd);
+            if (d < minOverallDistance) {
+              minOverallDistance = d;
+              matchedCluster = cluster;
+            }
           }
         }
 
         if (minOverallDistance < THRESHOLD && matchedCluster) {
           matchedCluster.photoIds.add(photo._id.toString());
-          // No need to store all descriptors anymore, since we only compare against the anchor!
+          // Save the face variation so the AI can match subsequent photos of the same person from even more difficult angles!
+          matchedCluster.descriptors.push(descriptor);
         } else {
           // Create new cluster
           clusters.push({

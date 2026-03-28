@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,7 +11,6 @@ import {
   LogOut,
   Menu,
   X,
-  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -52,28 +52,28 @@ export default function AdminSidebar() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="px-5 pt-6 pb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center shadow-sm shrink-0">
-            <Sparkles size={16} className="text-white" />
-          </div>
-          <div>
-            <p className="font-display text-base text-[#2B2B2B] leading-tight">
-              Sam&apos;s Creations
-            </p>
-            <p className="text-[10px] tracking-[0.2em] uppercase text-[#D6C3A3]">
-              Admin Panel
-            </p>
-          </div>
-        </div>
+      {/* Logo — same height as AdminPageHeader */}
+      <div className="flex items-center px-5 py-5 border-b border-[#EDE7DD] shrink-0">
+        <Image
+          src="/logo.png"
+          alt="Sam's Creations"
+          width={120}
+          height={38}
+          className="object-contain w-auto h-auto"
+          loading="eager"
+          priority
+        />
       </div>
 
-      {/* Divider */}
-      <div className="mx-4 h-px bg-[#EDE7DD] mb-4" />
+      {/* Nav label */}
+      <div className="px-5 pt-6 pb-2">
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-[#B0A090]">
+          Navigation
+        </p>
+      </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 space-y-1">
+      {/* Nav links */}
+      <nav className="flex-1 px-3 space-y-0.5">
         {NAV.map((item) => {
           const active = isActive(item);
           return (
@@ -82,45 +82,53 @@ export default function AdminSidebar() {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group",
+                "relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group",
                 active
-                  ? "bg-[#D6C3A3] text-white shadow-sm"
-                  : "text-[#6B6B6B] hover:bg-[#F2EDE5] hover:text-[#2B2B2B]"
+                  ? "bg-[#D6C3A3] text-white font-semibold"
+                  : "text-[#6B6B6B] font-medium hover:bg-[#F5F0E8] hover:text-[#2B2B2B]"
               )}
             >
+              {/* Active left accent bar */}
+              {active && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-white/50" />
+              )}
               <item.icon
-                size={18}
+                size={17}
                 className={cn(
                   "shrink-0 transition-colors",
-                  active ? "text-white" : "text-[#D6C3A3] group-hover:text-[#2B2B2B]"
+                  active ? "text-white" : "text-[#C4B09A] group-hover:text-[#B89B72]"
                 )}
               />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
               {active && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60" />
+                <span className="w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom */}
-      <div className="px-3 pb-6 mt-4 space-y-1">
-        <div className="mx-2 h-px bg-[#EDE7DD] mb-3" />
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center shrink-0">
-            <span className="text-white text-[11px] font-bold">A</span>
+      {/* Bottom: user + sign out */}
+      <div className="px-3 pb-5 mt-2 shrink-0">
+        <div className="h-px bg-[#EDE7DD] mx-2 mb-3" />
+
+        {/* User info */}
+        <div className="flex items-center gap-3 px-3 py-2 mb-1 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center shrink-0">
+            <span className="text-white text-xs font-bold">A</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-[#2B2B2B] truncate">Administrator</p>
-            <p className="text-[10px] text-[#6B6B6B]">Full access</p>
+            <p className="text-xs font-semibold text-[#2B2B2B] truncate">Administrator</p>
+            <p className="text-[10px] text-[#A09080]">Full access</p>
           </div>
         </div>
+
+        {/* Sign out */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#6B6B6B] hover:bg-red-50 hover:text-red-600 transition-all duration-150 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#6B6B6B] hover:bg-red-50 hover:text-red-500 transition-all duration-150 group"
         >
-          <LogOut size={17} className="shrink-0 group-hover:text-red-500" />
+          <LogOut size={16} className="shrink-0 group-hover:text-red-500 transition-colors" />
           Sign Out
         </button>
       </div>
@@ -135,13 +143,16 @@ export default function AdminSidebar() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-white border-b border-[#EDE7DD]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#D6C3A3] to-[#B89B72] flex items-center justify-center">
-            <Sparkles size={13} className="text-white" />
-          </div>
-          <span className="font-display text-base text-[#2B2B2B]">Sam&apos;s Creations</span>
-        </div>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-white border-b border-[#EDE7DD]">
+        <Image
+          src="/logo.png"
+          alt="Sam's Creations"
+          width={100}
+          height={32}
+          className="object-contain w-auto h-auto"
+          loading="eager"
+          priority
+        />
         <button
           onClick={() => setMobileOpen(true)}
           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F2EDE5] transition-colors"
@@ -154,13 +165,13 @@ export default function AdminSidebar() {
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 z-50 backdrop"
+            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="fixed top-0 left-0 bottom-0 z-50 w-64 bg-white shadow-2xl animate-slide-up-left">
+          <div className="fixed top-0 left-0 bottom-0 z-50 w-64 bg-white border-r border-[#EDE7DD]">
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F2EDE5]"
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F2EDE5] transition-colors"
             >
               <X size={16} className="text-[#6B6B6B]" />
             </button>

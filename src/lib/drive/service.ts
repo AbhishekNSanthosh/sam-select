@@ -6,15 +6,17 @@ const SCOPES = [
 ];
 
 function getDriveClient() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    },
-    scopes: SCOPES,
+  const oAuth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    "http://localhost:3000/api/auth/callback/google" // Should match the authorized redirect URI
+  );
+
+  oAuth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
   });
 
-  return google.drive({ version: "v3", auth });
+  return google.drive({ version: "v3", auth: oAuth2Client });
 }
 
 export interface DriveFile {
@@ -92,11 +94,13 @@ export async function uploadFileToDrive(
 ): Promise<{ id: string; thumbnailUrl: string; fullUrl: string }> {
   const drive = getDriveClient();
 
+  const targetFolder = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+
   const createRes = await drive.files.create({
     media: { mimeType, body: Readable.from(buffer) },
     requestBody: {
       name: filename,
-      parents: folderId ? [folderId] : [],
+      parents: targetFolder ? [targetFolder] : [],
     },
     fields: "id",
   });
@@ -139,4 +143,23 @@ export async function listEventFolders(
   return (response.data.files ?? [])
     .filter((f) => f.id && f.name)
     .map((f) => ({ id: f.id!, name: f.name! }));
+}
+
+/**
+ * Create a new folder in Google Drive
+ */
+export async function createDriveFolder(folderName: string, parentId?: string): Promise<string> {
+  const drive = getDriveClient();
+  const res = await drive.files.create({
+    requestBody: {
+      name: folderName,
+      mimeType: "application/vnd.google-apps.folder",
+      parents: parentId ? [parentId] : (process.env.GOOGLE_DRIVE_FOLDER_ID ? [process.env.GOOGLE_DRIVE_FOLDER_ID] : []),
+    },
+    fields: "id",
+  });
+  
+  const id = res.data.id!;
+  await grantPublicAccess(id); // Grant read access so images inside can be viewed
+  return id;
 }

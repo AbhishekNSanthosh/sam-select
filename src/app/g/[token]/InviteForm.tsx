@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils/cn";
@@ -77,9 +77,16 @@ export default function InviteForm({
     setTimeout(() => setShake(false), 600);
   }
 
+  useEffect(() => {
+    if (pinStr.length === 6 && !loading && !error) {
+      handleSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinStr]);
+
   async function handleSubmit() {
-    if (pinStr.length < 4) {
-      setError("Please enter your full PIN");
+    if (pinStr.length < 6) {
+      setError("Please enter your full 6-digit PIN");
       triggerShake();
       return;
     }
@@ -160,11 +167,11 @@ export default function InviteForm({
       )}
 
       <Button
-        className="w-full h-12 text-base shadow-lg shadow-[#D6C3A3]/20 hover:shadow-xl hover:shadow-[#D6C3A3]/30 transition-shadow"
+        className="w-full h-12 text-base shadow-lg text-black/90 shadow-[#D6C3A3]/20 hover:shadow-xl hover:shadow-[#D6C3A3]/30 transition-shadow"
         size="lg"
         onClick={handleSubmit}
         loading={loading}
-        disabled={locked || pinStr.replace(/\s/g, "").length < 4}
+        disabled={locked || pinStr.replace(/\s/g, "").length < 6}
       >
         {loading ? "Verifying…" : "Enter My Gallery"}
       </Button>
